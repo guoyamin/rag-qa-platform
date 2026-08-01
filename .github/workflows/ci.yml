@@ -10,17 +10,36 @@ env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "20"
 
+# ============================================
+# CI 门禁设计（与 make check 对齐，详见 docs/HARNESS_ENGINEERING.md §5.3）
+# --------------------------------------------
+# required job 集 = make check 全部阻断项：
+#   lint           -> pre-commit run --all-files（ruff/black/isort/detect-secrets/prettier/eslint）
+#                     单一真相源 = .pre-commit-config.yaml，CI 不再手写 lint，防漂移。
+#                     bandit 此处 SKIP，独立成 security-scan job，避免重复。
+#   type-check     -> mypy --strict（慢检查，不进 pre-commit，独立 required）
+#   security-scan  -> bandit -ll -c .bandit（独立 required，阻断，带报告）
+#   backend-unit-test / backend-integration-test -> pytest
+#   frontend-test  -> vue-tsc --noEmit + vitest
+#
+# 5 个 bug 修复：
+#   1. 前端无 lockfile           -> frontend/package-lock.json（npm ci 必需，已生成）
+#   2. 工具版本未固定            -> 全部 pip install -r requirements(-dev).txt，禁裸 pip install
+#   3. detect-secrets 无 baseline -> 走 pre-commit 钩子（自带 --baseline .secrets.baseline）
+#   4. bandit || true 非阻断     -> 独立 required job，去 || true，用 -c .bandit -ll
+#   5. CI 重复 lint 与 pre-commit 漂移 -> lint 改 pre-commit run --all-files
+#
+# 安装顺序（关键）：pre-commit 的前端钩子用 npx --no-install，必须 node_modules 已存在。
+#   故 lint job 固定顺序：先 pip install + npm ci，再 pre-commit run --all-files。
+# ============================================
+
 jobs:
   # ============================================
-  # 后端代码质量检查
+  # Lint + 密钥扫描（单一真相源：.pre-commit-config.yaml）
   # ============================================
-  backend-lint:
-    name: Backend Lint
+  lint:
+    name: Lint & Secret Scan
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,38 +48,86 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dev tools
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      # 关键：pre-commit 前端钩子用 npx --no-install，须 node_modules 已存在。
+      # 安装顺序固定：先 pip install + npm ci，再 pre-commit run --all-files。
+      - name: Run pre-commit (lint + secret scan)
+        run: SKIP=bandit pre-commit run --all-files
+
+  # ============================================
+  # 后端类型检查（独立 required job，慢检查不进 pre-commit）
+  # ============================================
+  type-check:
+    name: Type Check (mypy)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install black isort ruff mypy bandit detect-secrets
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Check code format (black)
-        run: black --check --diff app/
-
-      - name: Check import sorting (isort)
-        run: isort --check-only --diff app/
-
-      - name: Check code style (ruff)
-        run: ruff check app/
-
-      - name: Type check (mypy)
+      - name: Type check (mypy --strict)
         run: mypy --strict app/
 
-      - name: Security scan (bandit)
-        run: bandit -r app/ -f json -o bandit-report.json || true
+  # ============================================
+  # 后端安全扫描（独立 required job，阻断，带报告）
+  # ============================================
+  security-scan:
+    name: Security Scan (bandit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Check for secrets (detect-secrets)
-        run: detect-secrets scan --all-files --force-use-all-plugins
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install bandit
+        run: pip install -r requirements-dev.txt
+
+      - name: Security scan (bandit)
+        run: bandit -ll -c .bandit -r app/ -f json -o bandit-report.json
+
+      - name: Upload bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: backend/bandit-report.json
 
   # ============================================
   # 后端单元测试
@@ -71,7 +138,6 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,23 +146,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio pytest-cov factory-boy faker httpx
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run unit tests
-        run: pytest -m unit -v --cov=app --cov-report=term-missing
+        run: pytest -m unit -v --cov=app --cov-report=term-missing --cov-report=html:htmlcov
         env:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           SECRET_KEY: "test-secret-key"
@@ -151,20 +208,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio pytest-cov
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Wait for PostgreSQL
         run: |
@@ -183,15 +231,14 @@ jobs:
           LLM_API_KEY: "test-llm-key"
 
   # ============================================
-  # 前端代码质量检查
+  # 前端类型检查 + 单元测试
   # ============================================
-  frontend-lint:
-    name: Frontend Lint
+  frontend-test:
+    name: Frontend Type Check & Unit Tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./frontend
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -200,8 +247,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: ./frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -209,46 +256,16 @@ jobs:
       - name: Type check (vue-tsc)
         run: npx vue-tsc --noEmit
 
-      - name: Lint (eslint)
-        run: npm run lint
-
-      - name: Check format (prettier)
-        run: npx prettier --check "src/**/*"
-
-  # ============================================
-  # 前端单元测试
-  # ============================================
-  frontend-unit-test:
-    name: Frontend Unit Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: ./frontend/package.json
-
-      - name: Install dependencies
-        run: npm ci
-
       - name: Run unit tests
         run: npm run test:unit -- --run
 
   # ============================================
-  # 端到端测试
+  # 端到端测试（仅 PR）
   # ============================================
   e2e-test:
     name: E2E Tests
     runs-on: ubuntu-latest
-    needs: [backend-unit-test, frontend-unit-test]
+    needs: [backend-unit-test, frontend-test]
     if: github.event_name == 'pull_request'
 
     steps:
@@ -259,48 +276,47 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: ./frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install backend dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
+        working-directory: backend
 
       - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
+        run: npm ci
+        working-directory: frontend
 
       - name: Install Playwright
-        run: |
-          cd frontend
-          npx playwright install chromium
+        run: npx playwright install chromium
+        working-directory: frontend
 
       - name: Start backend server
         run: |
-          cd backend
           uvicorn app.main:app --host 0.0.0.0 --port 8000 &
           sleep 5
+        working-directory: backend
         env:
           DATABASE_URL: "sqlite+aiosqlite:///./test.db"
           SECRET_KEY: "test-secret-key"
 
       - name: Start frontend server
         run: |
-          cd frontend
+          npm run build
           npm run preview -- --host --port 4173 &
           sleep 5
+        working-directory: frontend
 
       - name: Run E2E tests
-        run: |
-          cd frontend
-          npx playwright test
+        run: npx playwright test
+        working-directory: frontend
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
