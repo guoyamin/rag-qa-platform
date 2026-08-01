@@ -65,19 +65,10 @@ jobs:
         run: npm ci
         working-directory: frontend
 
-      # 诊断：拆成每钩子一步，定位失败钩子
-      - name: ruff
-        run: pre-commit run ruff-check --all-files
-      - name: black
-        run: pre-commit run black-check --all-files
-      - name: isort
-        run: pre-commit run isort-check --all-files
-      - name: detect-secrets
-        run: pre-commit run detect-secrets --all-files
-      - name: prettier
-        run: pre-commit run prettier-check --all-files
-      - name: eslint
-        run: pre-commit run eslint --all-files
+      # 关键：pre-commit 前端钩子用 npx --no-install，须 node_modules 已存在。
+      # 安装顺序固定：先 pip install + npm ci，再 pre-commit run --all-files。
+      - name: Run pre-commit (lint + secret scan)
+        run: SKIP=bandit pre-commit run --all-files
 
   # ============================================
   # 后端类型检查（独立 required job，慢检查不进 pre-commit）
