@@ -1,0 +1,64 @@
+# 智能问答平台 - 提交门禁
+# commit 时自动检查暂存文件（秒级反馈），不通过则阻止提交。
+#
+# 设计原则：
+#   - 快检查进 commit 钩子：ruff / black / isort / bandit / detect-secrets / prettier / eslint
+#   - 慢检查（mypy / pytest）放 make check（容器内），不进 commit 钩子——避免提交变慢
+#   - monorepo 子目录：bash -c 'cd <dir> && tool "${@#<dir>/}"' -- 剥离前缀，配置文件自然被发现
+#
+# 依赖本机工具：pip install -r backend/requirements-dev.txt
+# 启用钩子：pre-commit install
+# 全量验证：pre-commit run --all-files
+
+repos:
+  - repo: local
+    hooks:
+      # ===== 后端 =====
+      - id: ruff-check
+        name: ruff check（后端风格）
+        entry: bash -c 'cd backend && ruff check "${@#backend/}"' --
+        language: system
+        files: '^backend/.*\.py$'
+        types: [python]
+
+      - id: black-check
+        name: black --check（后端格式）
+        entry: bash -c 'cd backend && black --check --diff "${@#backend/}"' --
+        language: system
+        files: '^backend/.*\.py$'
+        types: [python]
+
+      - id: isort-check
+        name: isort --check（后端导入排序）
+        entry: bash -c 'cd backend && isort --check-only --diff "${@#backend/}"' --
+        language: system
+        files: '^backend/.*\.py$'
+        types: [python]
+
+      - id: bandit
+        name: bandit（后端安全扫描）
+        entry: bash -c 'cd backend && bandit -ll "${@#backend/}"' --
+        language: system
+        files: '^backend/.*\.py$'
+        types: [python]
+        exclude: '^backend/tests/.*$'
+
+      # ===== 密钥泄露（全仓库，基于基线只拦新增）=====
+      - id: detect-secrets
+        name: detect-secrets（密钥泄露扫描）
+        entry: detect-secrets-hook --baseline .secrets.baseline
+        language: system
+        pass_filenames: true
+
+      # ===== 前端 =====
+      - id: prettier-check
+        name: prettier --check（前端格式）
+        entry: bash -c 'cd frontend && npx --no-install prettier --check "${@#frontend/}"' --
+        language: system
+        files: '^frontend/.*\.(vue|ts|tsx|js|css|scss|json)$'
+
+      - id: eslint
+        name: eslint（前端代码检查）
+        entry: bash -c 'cd frontend && npx --no-install eslint --ext .vue,.ts,.tsx "${@#frontend/}"' --
+        language: system
+        files: '^frontend/.*\.(vue|ts|tsx)$'

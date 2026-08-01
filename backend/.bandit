@@ -1,0 +1,6 @@
+# 安全扫描配置（对应 SECURITY_BASELINE.md 附录A）
+# 运行全部规则，不跳过；排除测试与迁移目录
+skips: []
+exclude_dirs:
+  - tests
+  - migrations

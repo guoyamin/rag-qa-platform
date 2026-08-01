@@ -1,0 +1,18 @@
+# 智能问答平台 - 前端开发环境
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 使用国内 npm 镜像源
+RUN npm config set registry https://registry.npmmirror.com
+
+# 先复制依赖和配置文件，利用Docker缓存层
+COPY package.json ./
+COPY vite.config.ts tsconfig.json tsconfig.node.json ./
+RUN npm install
+
+# 暴露端口
+EXPOSE 5173
+
+# 开发模式
+CMD ["npm", "run", "dev", "--", "--host"]

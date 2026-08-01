@@ -1,0 +1,16 @@
+# 统一行尾为 LF（跨平台一致，配合 prettier endOfLine: lf / black）
+# 覆盖 git core.autocrlf 在 Windows 上把 LF 转 CRLF 的行为，避免 prettier 反复报错
+* text=auto eol=lf
+
+# 二进制文件不做行尾转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

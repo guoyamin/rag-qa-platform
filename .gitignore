@@ -1,0 +1,98 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend build
+dist/
+dist-ssr/
+*.local
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+frontend/playwright-report/
+frontend/test-results/
+
+# Frontend auto-generated (unplugin)
+frontend/src/auto-imports.d.ts
+frontend/src/components.d.ts
+
+# Docker
+*.pid
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 临时/产物文件（自检产生）
+# 注：.secrets.baseline 必须提交（detect-secrets 共享基线，仅存哈希非明文）
+.env.container
+coverage/
+
+# Claude Code 本地配置（工具产物，不提交）
+.claude/

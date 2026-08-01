@@ -1,0 +1,51 @@
+{
+  "name": "rag-qa-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,vue,scss,css,json}\"",
+    "test:unit": "vitest",
+    "test:e2e": "playwright test",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "@vueuse/core": "^10.11.0",
+    "axios": "^1.7.2",
+    "dayjs": "^1.11.11",
+    "dompurify": "^3.4.12",
+    "element-plus": "^2.7.6",
+    "highlight.js": "^11.9.0",
+    "marked": "^13.0.2",
+    "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^3.2.1",
+    "vue": "^3.4.31",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.1",
+    "@types/dompurify": "^3.0.4",
+    "@types/node": "^20.14.10",
+    "@typescript-eslint/eslint-plugin": "^7.16.0",
+    "@typescript-eslint/parser": "^7.16.0",
+    "@vitejs/plugin-vue": "^5.0.5",
+    "@vitest/coverage-v8": "^2.0.3",
+    "@vue/test-utils": "^2.4.6",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.27.0",
+    "jsdom": "^24.1.0",
+    "prettier": "^3.3.2",
+    "sass": "^1.77.8",
+    "typescript": "^5.5.3",
+    "unplugin-auto-import": "^0.17.6",
+    "unplugin-vue-components": "^0.27.2",
+    "vite": "^5.3.3",
+    "vitest": "^2.0.3",
+    "vue-tsc": "^2.0.26"
+  }
+}
