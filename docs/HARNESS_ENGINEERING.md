@@ -1,8 +1,8 @@
 # Harness Engineering 工程门禁体系方案
 
-> **版本**：v2.6（v1 重构 + right-size + 评审修订 v2.1 + 原则沉淀 v2.3 + 实现细化 v2.4 + DX 补丁 v2.5 + 实施状态 v2.6）
+> **版本**：v2.7（v1 重构 + right-size + 评审修订 v2.1 + 原则沉淀 v2.3 + 实现细化 v2.4 + DX 补丁 v2.5 + 实施状态 v2.6 + 缺口补齐 v2.7）
 > **日期**：2026-08-02
-> **状态**：**已实施**（步骤 1-6、8 落地并入 main；步骤 5 可选跳过；派生物 CI 校验 / E2E / Trivy 见 §0 待办）
+> **状态**：**已实施并跑通**（步骤 1-8 全部落地；release-please 绿；派生物校验/Trivy/覆盖率三项缺口已补）
 > **定位**：智能问答平台（内部 RAG 应用）的工程基础设施总方案
 
 ---
@@ -19,18 +19,21 @@
 | ④ 治理文件 | CODEOWNERS / PR 模板 / Issue 模板 / Dependabot | ✅ 完成 | PR #23 / dependabot.yml |
 | ⑤ 技能层 | skills/onboard-endpoint + 根索引 | ⏭️ 可选，跳过 | 按需再加 |
 | ⑥ Alembic 初始化 | env.py + 初始迁移 + alembic.ini URL 可配置 + alembic check 门禁 | ✅ 完成 | PR #25 |
-| ⑦ 总基准 + runbook | 本文件 + harness-setup-runbook.md | ✅ 本次完成 | 本 PR |
-| ⑧ 复核基线 | main `make check` 全绿 | ✅ CI 全绿已证 | CI green @ 97f575c |
+| ⑦ 总基准 + runbook | 本文件 + harness-setup-runbook.md | ✅ 完成 | PR #26 |
+| ⑧ 复核基线 | main `make check` 全绿 | ✅ CI 全绿已证 | CI green @ ba8af77 |
 
-**CI 当前状态**（main）：`ci.yml` = ✅ success；`release-please.yml` = ❌ failure（见下）。
+**CI 当前状态**（main）：`ci.yml` = ✅ success；`release-please.yml` = ✅ success（已自动开 release PR #27 `chore(main): release 0.1.0`）。
 
-**release-please 修复（本 PR）**：`release-type: python` 缺 `path`，在仓库根找不到 `pyproject.toml`（实际在 `backend/`）→ release-please 在 main 每次 push 红 X。本 PR 加 `path: backend`。**仍需手动开两个仓库设置**（Settings → Actions → Workflow permissions = read+write；Allow Actions to create PRs = 勾），否则依旧失败——见 [runbook §4.2](harness-setup-runbook.md)。
+**release-please（已修复并跑通）**：`release-type: python` 加 `path: backend`（读 `backend/pyproject.toml` 版本），仓库设置已开（Workflow permissions + Allow Actions create PRs），main 已绿，自动开了 release PR #27。⚠️ 首版为 **0.1.0**（无历史 tag 时 release-please 从 0.1.0 起步，忽略 pyproject 的 1.0.0）——如需从 1.0.0 起，加 `release-as: 1.0.0`。
 
-**已知遗留（不阻断合并，见 runbook §7）**：
-- 派生物一致性 CI 校验（§14.3）待加：CI 重新生成 api-schema + `git diff --exit-code`。
-- E2E 测试（`e2e-test`）未稳定，非 required check。
-- 容器镜像扫描 Trivy（§6）待加。
-- Dependabot 安全告警需在 Settings 手动开启（runbook §3.2）。
+**补齐的「必须做」缺口（PR #32）**：
+- ✅ **派生物一致性 CI 校验**（§14.3「最重要修订」）：`derivative-check` job 重新生成 api-schema + TS 类型后 `git diff --exit-code`，已验证 regen 与已提交文件逐字节一致。**待加入 Ruleset required checks 才阻断合并**（一 UI 步，见 runbook §7）。
+- ✅ **Trivy 容器镜像扫描**（§6）：`container-scan.yml`，advisory（exit-code 0）+ SARIF 上传，已验证镜像可构建 + 扫描通过。
+- ✅ **覆盖率门槛 80→85**（§5.2/§9.2）：实测覆盖率 ≥85%，已验证不破 CI。
+
+**已知遗留（不阻断）**：
+- E2E 测试（`e2e-test`）未稳定，非 required check——核心问答功能成型后补。
+- `derivative-check` 待加入 Ruleset required checks（见 runbook §7）。
 
 ---
 
@@ -544,3 +547,4 @@ make gen-client
 - **v2.4（2026-08-01，实现细化）**：Alembic 修正（alembic check 移出 make check 待初始化、alembic.ini URL 可配置化、§2 DB schema 改「单一真相源」、§12 增风险、§10 增初始化步骤）；CI↔make check 对齐（required check 集 = make check 阻断项，lint 走 pre-commit 不替代 mypy/pytest，消除歧义）；OpenAPI 工具链（export 脚本无条件 mock env、openapi-typescript 进 devDep、派生物校验失败明确指引）；§4.5 加 Review Agent + 扩充工作流；setup-dev 自检、CONTRIBUTING pipx 前置、DB 隔离配置、镜像扫描衔接、mypy 分阶备注；再次通读消除 Alembic/CI 相关前后矛盾
 - **v2.5（2026-08-01，DX 补丁）**：增「Makefile 目标清单」附录（实施参考）；§13 标注当前阶段 alembic check 挂起；§16 DB schema 补「当前为 models」对齐 §2/§15
 - **v2.6（2026-08-02，实施状态）**：步骤 1-6、8 落地并入 main（CI green @ 97f575c），新增 §0 实施状态总览；分支保护确认用 **Ruleset**（0 approvals + enforce admins，单人硬门禁，纠正 §5.4「至少 1 review」歧义）；§9.3 B 类设置标注完成 + 指向 runbook；产出 `docs/harness-setup-runbook.md`（平台设置复现手册）；修复 release-please（`release-type: python` 缺 `path` 致 main 红 X → 加 `path: backend`，版本级 CHANGELOG 落 `backend/CHANGELOG.md`）；待办：派生物 CI 校验、E2E、Trivy、Dependabot alerts 手动开启
+- **v2.7（2026-08-02，缺口补齐）**：PR #32 补齐 §0 三项「必须做」缺口——① 派生物一致性 CI 校验（§14.3「最重要修订」）：ci.yml 加 `derivative-check` job（regen + `git diff --exit-code`），generate-api-client.sh 加 prettier 使 regen 与已提交文件逐字节一致，已验证通过（待加入 Ruleset required checks 才阻断合并）；② Trivy 容器镜像扫描（§6）：`container-scan.yml`（advisory + SARIF），已验证镜像可构建；③ 覆盖率门槛 80→85（§5.2/§9.2）：实测 ≥85% 已验证。同时 release-please 已跑通（release PR #27）。剩余：E2E 稳定化、derivative-check 入 Ruleset
