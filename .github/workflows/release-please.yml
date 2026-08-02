@@ -17,7 +17,12 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         with:
-          # monorepo（后端 python + 前端 node）；以 backend/pyproject.toml 为发版源
+          # monorepo（后端 python + 前端 node）；以 backend/pyproject.toml 为发版源。
+          # path: backend —— release-type:python 在该目录下找 pyproject.toml 的 [project] version；
+          #        不设 path 则在仓库根找，根无 pyproject -> release-please 必失败（曾致 main 每次 push 红 X）。
           release-type: python
+          path: backend
+          # include-component-in-tag: false —— tag 形如 v1.0.1（无 backend- 前缀）。
           # 约定：feat -> minor，fix -> patch，BREAKING CHANGE / feat! -> major
+          # 版本级 CHANGELOG 写到 backend/CHANGELOG.md（与 docs/changelogs/ 任务级并存，非冲突）。
           include-component-in-tag: false
