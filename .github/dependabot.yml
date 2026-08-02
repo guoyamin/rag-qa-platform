@@ -1,0 +1,33 @@
+# Dependabot 依赖更新配置
+# 提交后自动生效；告警在 Settings > Code security 查看。
+# 范围：后端 pip、前端 npm、GitHub Actions workflow 版本。频率：每周。
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "backend"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "frontend"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ci"

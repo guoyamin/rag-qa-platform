@@ -1,0 +1,26 @@
+name: Bug 报告
+description: 报告一个 bug
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 发生了什么？复现步骤？
+      placeholder: "1. 进入... 2. 点击... 3. 看到..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望
+      description: 本应发生什么
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      placeholder: "浏览器/版本、后端版本、部署环境"
+    validations:
+      required: false
