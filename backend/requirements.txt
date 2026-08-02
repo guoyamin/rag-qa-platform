@@ -43,7 +43,7 @@ pypdf==4.3.0
 python-docx==1.1.2
 openpyxl==3.1.5
 beautifulsoup4==4.12.3
-markdown==3.6
+markdown==3.10.2
 
 # === 异步任务 ===
 celery==5.4.0
