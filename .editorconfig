@@ -1,0 +1,19 @@
+# 跨编辑器基线（配合 .gitattributes 的 eol=lf，保证宿主机/CI 行尾一致）
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+
+[*.{py}]
+indent_style = space
+indent_size = 4
+
+[*.{vue,ts,tsx,js,jsx,css,scss,sass,json,jsonc,yml,yaml,html,md}]
+indent_style = space
+indent_size = 2
+
+[Makefile]
+indent_style = tab
