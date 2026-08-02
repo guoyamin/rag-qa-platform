@@ -15,5 +15,7 @@ python tools/export-openapi.py
 
 # 2. openapi-typescript 生成前端 TS 类型（仅类型，非运行时客户端）
 cd frontend && npx --no-install openapi-typescript ../docs/api-contracts/api-schema.json -o src/api/types.d.ts
+# 3. prettier 格式化（与 CI 派生物一致性校验对齐：regen 须与已提交的 prettier'd 文件逐字节一致）
+npx --no-install prettier --write src/api/types.d.ts
 echo "✅ 生成完成：docs/api-contracts/api-schema.json + frontend/src/api/types.d.ts"
 echo "   记得 git add 这两个派生物。"

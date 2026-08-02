@@ -1,0 +1,46 @@
+name: Container Scan (Trivy)
+
+# 容器镜像漏洞扫描（HARNESS §6 安全体系一层）。
+# 设计为 advisory：发现漏洞不阻断 CI/门禁（§2 门禁纯度——advisory 与 gate 分离）。
+# 结果以 SARIF 上传到 Settings → Code security → Code scanning alerts 供查看。
+# 待团队共识后可把 exit-code 改 1 + 收紧 severity 收紧为「fail-on-CRITICAL」阻断。
+#
+# 触发：push 到 main + PR。非 required check（不在 Ruleset 必过清单），不阻断合并。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write  # 上传 SARIF 到 Code scanning
+
+jobs:
+  trivy:
+    name: Trivy image scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t rag-qa-backend:scan ./backend
+
+      - name: Trivy vulnerability scan (advisory)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: rag-qa-backend:scan
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: "0"        # advisory：有漏洞也退出 0，不失败 job（§2 门禁纯度）
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true  # 只报有修复版本的漏洞，降噪
+        continue-on-error: true
+
+      - name: Upload SARIF to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif

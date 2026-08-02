@@ -190,11 +190,21 @@ curl -s "https://api.github.com/repos/guoyamin/rag-qa-platform/actions/workflows
 
 | 项 | 状态 | 说明 |
 |---|---|---|
-| **派生物一致性 CI 校验** | 待加 | CI 应重新跑 `python tools/export-openapi.py` + `make gen-client` 再 `git diff --exit-code`，防「后端改了前端类型没同步」。当前靠 `make gen-client` 自觉（HARNESS §14.3）。 |
+| **派生物一致性 CI 校验** | ✅ 已加（PR #32） | ci.yml `derivative-check` job：重新生成 api-schema + TS 类型后 `git diff --exit-code`。**⚠️ 待加入 Ruleset required status checks 才阻断合并**——见下方补充。 |
 | **E2E 测试** | 未稳定 | `e2e-test` job 依赖 Playwright 起前后端服务，未稳定故非 required。核心问答功能成型后再补。 |
 | **技能层（skills/）** | 可选 | HARNESS §10 第 5 步，示例 `onboard-endpoint` 技能 + 根索引。当前跳过，按需加。 |
 | **剩余 Dependabot PR** | 可选 | #2/#4/#15-17/#20-22 等小版本升级，逐个 review 合并即可。 |
-| **容器镜像扫描（Trivy）** | 待加 | HARNESS §6 容器层；`container-scan.yml` 复用 CI 构建镜像，按需引入。 |
+| **容器镜像扫描（Trivy）** | ✅ 已加（PR #32） | `container-scan.yml`：构建 backend 镜像 + trivy 扫描 + SARIF 上传。advisory（exit-code 0），不阻断；后续可收紧 fail-on-CRITICAL。 |
+
+### 7.1 把 derivative-check 加入 Ruleset（让它真正阻断合并）
+
+`derivative-check` job 已在 ci.yml，但默认不在分支保护必过清单，故漂移时**不阻断合并**。要让它强制生效：
+
+1. 打开 **Settings → Rules → Rulesets** → 编辑 `main-protection`
+2. 在 **Require status checks** 的搜索框输入 `Derivative Check`
+3. 勾选 **`Derivative Check (OpenAPI/TS sync)`** 加入必过清单 → 保存
+
+之后 PR 须 `derivative-check` 也绿才能合并（防「后端改了前端类型没同步」直接进 main）。
 
 ---
 
