@@ -37,6 +37,7 @@ use_parentheses = true
 ensure_newline_before_comments = true
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 known_first_party = ["app"]
+skip_glob = ["app/db/migrations/versions/*"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -98,6 +99,8 @@ exclude_lines = [
 [tool.ruff]
 target-version = "py311"
 line-length = 88
+# Alembic 迁移为自动生成，不参与 lint（避免每次 autogenerate 后 ruff/isort churn）
+extend-exclude = ["app/db/migrations/versions"]
 
 [tool.ruff.lint]
 select = [

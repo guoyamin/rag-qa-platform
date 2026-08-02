@@ -19,6 +19,7 @@ repos:
         entry: bash -c 'cd backend && ruff check "${@#backend/}"' --
         language: system
         files: '^backend/.*\.py$'
+        exclude: 'migrations/versions/'
         types: [python]
 
       - id: black-check
@@ -26,6 +27,7 @@ repos:
         entry: bash -c 'cd backend && black --check --diff "${@#backend/}"' --
         language: system
         files: '^backend/.*\.py$'
+        exclude: 'migrations/versions/'
         types: [python]
 
       - id: isort-check
@@ -33,6 +35,7 @@ repos:
         entry: bash -c 'cd backend && isort --check-only --diff "${@#backend/}"' --
         language: system
         files: '^backend/.*\.py$'
+        exclude: 'migrations/versions/'
         types: [python]
 
       - id: bandit

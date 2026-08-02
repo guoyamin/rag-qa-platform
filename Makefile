@@ -98,8 +98,8 @@ security: security-backend
 
 # 完整质量门禁（提交前必跑，与 CI 一致）：后端 lint+类型+测试+安全 + 前端 类型+lint+单测
 check:
-	@echo "==> [1/2] 后端门禁（容器内）：ruff + black + isort + mypy + bandit + pytest..."
-	docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && ruff check app tests && black --check app tests && isort --check-only app tests && mypy --strict app && bandit -ll -c .bandit -r app/ && pytest -v --cov=app --cov-report=term-missing'
+	@echo "==> [1/2] 后端门禁（容器内）：ruff + black + isort + mypy + bandit + pytest + alembic check..."
+	docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && ruff check app tests && black --check app tests && isort --check-only app tests && mypy --strict app && bandit -ll -c .bandit -r app/ && pytest -v --cov=app --cov-report=term-missing && export DATABASE_URL=sqlite+aiosqlite:///./_alembic_check.db && alembic upgrade head && alembic check && rm -f _alembic_check.db'
 	@echo "==> [2/2] 前端门禁：vue-tsc + eslint + vitest..."
 	cd frontend && npm run type-check && npm run lint && npm run test:unit -- --run
 	@echo "==> 全部门禁通过"
