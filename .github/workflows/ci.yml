@@ -272,6 +272,53 @@ jobs:
         run: npm run test:unit -- --run
 
   # ============================================
+  # 派生物一致性校验（OpenAPI 契约 + 前端 TS 类型）
+  # 重新生成 api-schema.json + types.d.ts，git diff --exit-code。
+  # 防后端改了路由/schema 但忘 make gen-client，导致前端类型漂移（HARNESS §14.3 最重要修订）。
+  # 注：本 job 须加入分支保护 Ruleset 的 required status checks 才真正阻断合并（见 runbook §7）。
+  # ============================================
+  derivative-check:
+    name: Derivative Check (OpenAPI/TS sync)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend deps (export-openapi.py 导入 app 需运行期依赖)
+        run: pip install -r backend/requirements.txt
+
+      - name: Install frontend deps (openapi-typescript + prettier)
+        run: npm ci
+        working-directory: frontend
+
+      - name: Regenerate derivatives
+        run: bash tools/generate-api-client.sh
+
+      - name: Verify no drift (git diff --exit-code)
+        run: |
+          if ! git diff --exit-code -- docs/api-contracts/api-schema.json frontend/src/api/types.d.ts; then
+            echo ""
+            echo "::error::派生物与代码不一致——后端改了路由/schema 但没重新生成前端类型。"
+            echo "修复：python tools/export-openapi.py && make gen-client，然后 git add 提交这两个派生物。"
+            exit 1
+          fi
+          echo "✅ 派生物与代码一致"
+
+  # ============================================
   # 端到端测试（仅 PR）
   # ============================================
   e2e-test:
