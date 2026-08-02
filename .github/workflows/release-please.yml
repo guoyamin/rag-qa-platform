@@ -1,0 +1,23 @@
+name: release-please
+
+# 从 Conventional Commits 自动发版（语义化版本 + changelog）。
+# 提交 feat:/fix: 到 main 后，release-please 自动开一个 release PR；
+# 合并该 release PR 即创建 tag + GitHub Release。
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          # monorepo（后端 python + 前端 node）；以 backend/pyproject.toml 为发版源
+          release-type: python
+          # 约定：feat -> minor，fix -> patch，BREAKING CHANGE / feat! -> major
+          include-component-in-tag: false

@@ -1,6 +1,6 @@
 # 智能问答平台
 
-.PHONY: help lint test security security-check format clean setup-dev check
+.PHONY: help lint test security security-check format clean setup-dev check gen-client
 
 # 默认显示帮助
 help:
@@ -24,6 +24,7 @@ help:
 	@echo "  make security          全部安全扫描"
 	@echo "  make check             完整门禁 (提交前必跑，与CI一致)"
 	@echo "  make security-check    依赖漏洞预检 (advisory，不阻断)"
+	@echo "  make gen-client        重新生成 OpenAPI 契约 + 前端 TS 类型"
 	@echo "  make setup-dev         安装开发工具 (首次使用)"
 	@echo "  make clean             清理缓存和构建产物"
 	@echo ""
@@ -126,6 +127,12 @@ security-check:
 	@echo "==> [advisory，不阻断] 前端依赖漏洞（npm audit）..."
 	@cd frontend && npm audit || true
 	@echo "==> 完成（advisory，有发现见上方输出；不阻断 CI/门禁）。"
+
+# 重新生成 OpenAPI 契约 + 前端 TS 类型（后端改路由/schema 后跑；派生物须提交）
+gen-client:
+	@echo "==> 重新生成 OpenAPI 契约 + 前端 TS 类型..."
+	@bash tools/generate-api-client.sh
+	@echo "==> 完成。记得 git add docs/api-contracts/api-schema.json frontend/src/api/types.d.ts"
 
 dev:
 	cd deployment && docker-compose up -d
