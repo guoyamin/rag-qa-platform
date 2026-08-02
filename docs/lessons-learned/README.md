@@ -6,6 +6,7 @@
 
 | 文件 | 内容 |
 |------|------|
+| [Harness Engineering 搭建复盘](./harness-engineering.md) | 门禁体系搭建踩坑：方案级错误（分支保护死局/release-please/门禁纯度等）+ 实施坑（detect-secrets 基线/PAT/prettier 对齐等） |
 | [AI 编码陷阱](./ai-coding-pitfalls.md) | AI 辅助编码引入的 bug 与规避（Edit/类型声明/再导出/认证循环/未自检） |
 | [开发环境问题](./dev-environment.md) | Docker / vite / worktree 等环境陷阱 |
 | [安全与规范](./security-compliance.md) | 安全漏洞与编码规范违反 |
