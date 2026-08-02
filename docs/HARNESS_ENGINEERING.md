@@ -1,6 +1,6 @@
 # Harness Engineering 工程门禁体系方案
 
-> **版本**：v2.7（v1 重构 + right-size + 评审修订 v2.1 + 原则沉淀 v2.3 + 实现细化 v2.4 + DX 补丁 v2.5 + 实施状态 v2.6 + 缺口补齐 v2.7）
+> **版本**：v2.8（v1 重构 + right-size + 评审修订 v2.1 + 原则沉淀 v2.3 + 实现细化 v2.4 + DX 补丁 v2.5 + 实施状态 v2.6 + 缺口补齐 v2.7 + 文档漂移修正 v2.8）
 > **日期**：2026-08-02
 > **状态**：**已实施并跑通**（步骤 1-8 全部落地；release-please 绿；派生物校验/Trivy/覆盖率三项缺口已补）
 > **定位**：智能问答平台（内部 RAG 应用）的工程基础设施总方案
@@ -131,7 +131,7 @@ rag-qa-platform/
 │   ├── requirements-dev.txt             # ✅ lint/安全工具固定版本（CI 也须用）
 │   ├── .bandit                          # ✅ 安全扫描配置
 │   ├── .env.example                     # ✅ 已有环境变量占位
-│   ├── alembic.ini                      # ✅ ⚠️ 迁移配置（待初始化 + URL 可配置化，见 §12）
+│   ├── alembic.ini                      # ✅ 迁移配置（已初始化 + URL 可配置化，PR #25）
 │   ├── Dockerfile / Dockerfile.dev      # ✅
 │   ├── app/                             # ✅ 业务源码
 │   └── tests/                           # ✅ 单元 + 集成测试
@@ -166,7 +166,7 @@ rag-qa-platform/
 │   └── docker-compose.yml               # ✅
 │
 ├── .pre-commit-config.yaml              # ✅ ⚠️ 加卫生/commit-msg/.env 钩子
-├── Makefile                             # ✅ ⚠️ 加 security-check/gen-client 目标（alembic check 待初始化）
+├── Makefile                             # ✅ 加 security-check/gen-client 目标 + alembic check（已加入，PR #25）
 ├── .editorconfig                        # 🆕 跨编辑器基线（缩进/字符集/eol）
 ├── .nvmrc                               # 🆕 锁定 Node 版本（与 CI 对齐）
 ├── .gitattributes                       # ✅ 强制 LF 行尾（Windows 必备）
@@ -256,9 +256,9 @@ when: 用户要求新增后端接口/路由时
 
 **定位**：`make check` 是**纯阻断**门禁--任一项失败即返回非零，**不混入 advisory 检查**（见 §2 门禁纯度）。
 
-**包含（全阻断）**：ruff + black + isort + mypy --strict + bandit + pytest（`--cov-fail-under=85`）。
+**包含（全阻断）**：ruff + black + isort + mypy --strict + bandit + pytest（`--cov-fail-under=85`）+ `alembic check`（模型↔迁移一致性，PR #25 加入）。
 
-**待加入（前置未就绪）**：`alembic check`（Alembic 1.9+，比对模型与 migration 脚本，非破坏性）--待 Alembic 初始化后加入 make check 与 CI（见 §14.4、§12）。**当前不进 make check，否则必失败**（Alembic 未初始化）。
+**已加入**：`alembic check`（Alembic 1.9+，比对模型与 migration 脚本，非破坏性）——Alembic 已初始化（env.py + 初始迁移 + URL 可配置化，PR #25），已纳入 make check 与 CI（sqlite 隔离库执行，见 §14.4）。
 
 **DB 安全**：`make check` 涉及 DB 的步骤（pytest 集成测试）一律用**隔离测试库**（sqlite 内存或 `rag_qa_test`），**不连开发库**，防误操作开发数据。具体配置（`.env.test` 或 conftest fixture 切换 `DATABASE_URL`）见 `TEST_STRATEGY.md` / `CONTRIBUTING.md`。
 
@@ -268,7 +268,7 @@ when: 用户要求新增后端接口/路由时
 
 ### 5.3 CI（.github/workflows/ci.yml）
 
-**CI 与 make check 对齐（关键）**：CI 的 required status check 集合 = `make check` 的全部阻断项。lint（ruff/black/isort/eslint/prettier）走 `pre-commit run --all-files`（替代手写 lint 步骤）；**mypy --strict / pytest（含 `--cov-fail-under=85`）/ bandit 保持独立 required job，不被 pre-commit 替代**（它们不在 `.pre-commit-config`）。alembic check 待 Alembic 初始化后加入 CI。如此 §5.4「PR 必过 CI」才等价于「必过 make check 门禁」。
+**CI 与 make check 对齐（关键）**：CI 的 required status check 集合 = `make check` 的全部阻断项。lint（ruff/black/isort/eslint/prettier）走 `pre-commit run --all-files`（替代手写 lint 步骤）；**mypy --strict / pytest（含 `--cov-fail-under=85`）/ bandit 保持独立 required job，不被 pre-commit 替代**（它们不在 `.pre-commit-config`）。`alembic check` 已纳入 CI（backend-unit-test job，PR #25）。如此 §5.4「PR 必过 CI」才等价于「必过 make check 门禁」。
 
 **修复 v1 的 5 个 bug**：
 1. 前端无 lockfile -> `npm ci` 必失败（补 `package-lock.json`）
@@ -383,9 +383,9 @@ when: 用户要求新增后端接口/路由时
 | `.github/workflows/ci.yml` | 修 5 bug（lint 改 `pre-commit run --all-files`，安装顺序先 `npm ci`）+ required check 对齐 make check（mypy/pytest/bandit 独立 required job）+ 派生物一致性校验（失败打印指引）+ Trivy job（复用构建镜像） |
 | `backend/pytest.ini` | 加 `--cov-fail-under=85` |
 | `.pre-commit-config.yaml` | 加卫生/commit-msg/.env 钩子 |
-| `Makefile` | 加 `security-check`（advisory）/ `gen-client` 目标；`alembic check` 待 Alembic 初始化后加入 |
+| `Makefile` | 加 `security-check`（advisory）/ `gen-client` 目标；`alembic check` 已加入（PR #25） |
 | `Makefile` 的 `setup-dev` | 增加宿主机 `pipx` 装 pre-commit 工具链（对齐 requirements-dev.txt）+ 自检 pipx/Python 前置并打印兜底（见 §14.1） |
-| `backend/alembic.ini` | URL 可配置化（现硬编码开发库 `postgresql+asyncpg://...localhost:5432/rag_qa`）；补 env.py + 初始迁移（Alembic 初始化） |
+| `backend/alembic.ini` | ✅ URL 可配置化 + env.py + 初始迁移（Alembic 已初始化，PR #25） |
 | `.gitignore` | 确认忽略 `.env` |
 
 ### 9.3 平台设置（B 类，已写 runbook）
@@ -396,20 +396,20 @@ when: 用户要求新增后端接口/路由时
 2. **main 分支保护** ✅：Ruleset（0 approvals + enforce admins + 6 required checks + squash）—— runbook §1
 3. **Dependabot** ✅ 配置生效：alerts/security updates 需在 Settings 手动开 —— runbook §3
 4. **release-please** ✅ 配置生效：需在 Settings 开 Workflow permissions + Allow Actions create PRs —— runbook §4
-5. Trivy：待加（见 §0 待办）
+5. **Trivy** ✅ 已加：`container-scan.yml`（advisory + SARIF，PR #32）—— 见 §0 / runbook §7
 
 ---
 
 ## 10. 实施顺序（统一实施，分批验证）
 
-> **落地状态见 §0**（步骤 1-6、8 ✅；步骤 5 ⏭️ 可选跳过）。以下为原计划顺序，保留作实施路径参照。
+> **落地状态见 §0**（步骤 1-8 全部 ✅，除 5 跳过）。以下为原计划顺序，保留作实施路径参照。
 
 1. **零风险增量**：`frontend/package-lock.json`、`.nvmrc`、`.editorconfig`、`.gitignore` 核对、根 `AGENTS.md`+`CLAUDE.md`、`tools/export-openapi.py`（含 mock env）、`docs/api-contracts/`、`docs/CONTRIBUTING.md`
-2. **门禁增强**：`.pre-commit-config.yaml`（卫生 + commit-msg + .env 钩子，vendor `tools/hooks/`）、`Makefile`（`security-check` + `gen-client` 目标；`setup-dev` 补宿主机工具 + 自检前置；`alembic check` 待初始化）、`ci.yml`（修 5 bug + 安装顺序 + `pre-commit run --all-files` 仅 lint + required check 对齐 make check + 派生物校验 + Trivy job）
+2. **门禁增强**：`.pre-commit-config.yaml`（卫生 + commit-msg + .env 钩子，vendor `tools/hooks/`）、`Makefile`（`security-check` + `gen-client` 目标；`setup-dev` 补宿主机工具 + 自检前置）、`ci.yml`（修 5 bug + 安装顺序 + `pre-commit run --all-files` 仅 lint + required check 对齐 make check + 派生物校验 + Trivy job）
 3. **契约与发版**：`tools/generate-api-client.sh` + `make gen-client` + `openapi-typescript` 进 devDependencies、`.github/workflows/release-please.yml`、`.github/dependabot.yml`（commit-msg 钩子已在第 2 步保障 conventional commits 前提）
 4. **治理文件**：`CODEOWNERS`、`PULL_REQUEST_TEMPLATE.md`、`ISSUE_TEMPLATE/`
 5. **技能层**：`skills/onboard-endpoint/SKILL.md` 示例 + 根路由索引段
-6. **Alembic 初始化**：补 env.py + 初始迁移 + alembic.ini URL 可配置化；完成后把 `alembic check` 加入 make check 与 CI
+6. **Alembic 初始化** ✅：补 env.py + 初始迁移 + alembic.ini URL 可配置化；`alembic check` 已加入 make check 与 CI（PR #25）
 7. **总基准 + runbook**：`docs/HARNESS_ENGINEERING.md`（本文件，持续更新）+ `docs/harness-setup-runbook.md`（B 类平台设置步骤）
 8. **复核基线**：容器已挂 main，跑一次 `make check` 确认 main 当前代码全绿（无需重建容器）
 
@@ -434,7 +434,7 @@ when: 用户要求新增后端接口/路由时
 | 项 | 影响 | 处置 |
 |---|---|---|
 | **无 git remote** | CI / 分支保护 / Dependabot / release-please 全部待此激活 | 实施第 1~5 步可先行（纯本地文件）；B 类平台设置需先配 remote |
-| **Alembic 未初始化** | migrations 目录空、无 env.py；`alembic check` 跑不了；alembic.ini 硬编码开发库 URL；schema 实际经 models `create_all` 建表 | 实施第 6 步初始化（env.py + 初始迁移 + URL 可配置化），`alembic check` 待此后启用 |
+| ~~Alembic 未初始化~~（**已解决**） | 第 6 步（PR #25）已完成初始化：env.py + 初始迁移 + URL 可配置化；`alembic check` 已纳入 make check 与 CI | 无需处置 |
 | ~~dev 容器挂载旧 worktree~~（**已解决**） | 实测当前 `rag-qa-backend` 容器已挂 main（`D:/Project/Demo/backend/...`），不再挂 suspicious-allen；`make check` 现跑 main 代码 | 仅需复核 `make check` 基线，无需重建 |
 | **ci.yml 5 个 bug** | 配 remote 后 CI 必红 | 实施第 2 步修复 |
 | **覆盖率门槛值** | 85% 留余量 vs 90% 顶住防回退 | 暂定 85%，可按团队共识调整 |
@@ -450,7 +450,7 @@ make setup-dev
 # 之后每次 commit 自动触发提交门禁（秒级）
 git commit ...
 
-# 提交前跑完整门禁（纯阻断，与 CI required check 一致；当前阶段 alembic check 挂起，待 Alembic 初始化后加入，见 §10/§14.4）
+# 提交前跑完整门禁（纯阻断，与 CI required check 一致：ruff/black/isort/mypy/bandit/pytest + alembic check）
 make check
 
 # 依赖漏洞 advisory 预检（不阻断，单独目标）
@@ -482,10 +482,10 @@ make gen-client
 - **问题**：§7.2 契约驱动工作流未纳入 CI 强制。dev 忘记 `make gen-client` 就提交，「后端改了前端没同步」老问题原样存在，契约驱动形同虚设。
 - **修法**：CI 加一步--重新跑 `python tools/export-openapi.py` + `make gen-client`，再 `git diff --exit-code`。提交的 `docs/api-contracts/api-schema.json` 与生成的客户端类型与最新代码不一致即 CI 红（generated-artifact 一致性校验标准模式）；**失败输出打印明确修复指引**。v2.3 将此升格为 §2 横切原则，覆盖所有派生物。
 
-### 14.4 `alembic check`（待 Alembic 初始化后启用，影响 §5.2）
+### 14.4 `alembic check`（✅ 已启用，影响 §5.2）
 - **问题**：后端「只改模型忘生成 migration」会导致线上启动 503。
 - **修法**：`alembic check`（Alembic 1.9+，已锁 1.13.2）比对模型与最新 migration，发现未迁移的模型变更即报错，非破坏性、不碰开发库。
-- **前置**：项目 Alembic **当前未初始化**（migrations 目录空、无 env.py，schema 经 models `create_all` 建表）。需先补 env.py + 初始迁移 + alembic.ini URL 可配置化（现硬编码开发库），**之后**才把 `alembic check` 加入 make check 与 CI。在此之前不进 make check，否则必失败。
+- **状态**：Alembic 已初始化（env.py + 初始迁移 + alembic.ini URL 可配置化，PR #25），`alembic check` 已纳入 `make check` 与 CI（backend-unit-test job：sqlite 隔离库 `alembic upgrade head && alembic check`）。改 ORM 模型后须跑 `alembic revision --autogenerate` 生成迁移并提交，否则 `alembic check` 报模型↔迁移不一致。
 
 ### 14.5 §12 容器风险更正
 - §12 原「dev 容器挂旧 worktree（suspicious-allen）需用户确认重建」已过时：实测当前 `rag-qa-backend` 容器 bind mount 已指向 main（`D:/Project/Demo/backend/...`），问题已解决。仅剩「复核 `make check` 基线」一步，无需重建。
@@ -527,7 +527,7 @@ make gen-client
 | 目标 | 类型 | 说明 |
 |---|---|---|
 | `make setup-dev` | 一次性 | 自检 pipx/Python 3.11 前置；宿主机 `pipx` 装 pre-commit 工具链（对齐 requirements-dev.txt）；容器内装 lint 工具；`pre-commit install`；`npm ci`（见 §14.1） |
-| `make check` | 阻断 | 纯阻断完整门禁，与 CI required check 一致：ruff + black + isort + mypy --strict + bandit + pytest（`--cov-fail-under=85`）。**当前不含 alembic check**（待 Alembic 初始化，见 §10 第 6 步 / §14.4） |
+| `make check` | 阻断 | 纯阻断完整门禁，与 CI required check 一致：ruff + black + isort + mypy --strict + bandit + pytest（`--cov-fail-under=85`）+ `alembic check`（PR #25 加入） |
 | `make security-check` | advisory | 依赖漏洞预检 pip-audit + npm audit，仅告警不阻断（见 §5.2 / §6） |
 | `make gen-client` | 一次性 | 从 `docs/api-contracts/api-schema.json` 用 openapi-typescript 重新生成前端 TS 类型（见 §7.2） |
 | `make lint-backend` / `lint-frontend` / `test-backend` / `test-frontend` | 已有 | 分项 lint/test，保留自 v1 |
@@ -548,3 +548,4 @@ make gen-client
 - **v2.5（2026-08-01，DX 补丁）**：增「Makefile 目标清单」附录（实施参考）；§13 标注当前阶段 alembic check 挂起；§16 DB schema 补「当前为 models」对齐 §2/§15
 - **v2.6（2026-08-02，实施状态）**：步骤 1-6、8 落地并入 main（CI green @ 97f575c），新增 §0 实施状态总览；分支保护确认用 **Ruleset**（0 approvals + enforce admins，单人硬门禁，纠正 §5.4「至少 1 review」歧义）；§9.3 B 类设置标注完成 + 指向 runbook；产出 `docs/harness-setup-runbook.md`（平台设置复现手册）；修复 release-please（`release-type: python` 缺 `path` 致 main 红 X → 加 `path: backend`，版本级 CHANGELOG 落 `backend/CHANGELOG.md`）；待办：派生物 CI 校验、E2E、Trivy、Dependabot alerts 手动开启
 - **v2.7（2026-08-02，缺口补齐）**：PR #32 补齐 §0 三项「必须做」缺口——① 派生物一致性 CI 校验（§14.3「最重要修订」）：ci.yml 加 `derivative-check` job（regen + `git diff --exit-code`），generate-api-client.sh 加 prettier 使 regen 与已提交文件逐字节一致，已验证通过（待加入 Ruleset required checks 才阻断合并）；② Trivy 容器镜像扫描（§6）：`container-scan.yml`（advisory + SARIF），已验证镜像可构建；③ 覆盖率门槛 80→85（§5.2/§9.2）：实测 ≥85% 已验证。同时 release-please 已跑通（release PR #27）。剩余：E2E 稳定化、derivative-check 入 Ruleset
+- **v2.8（2026-08-02，文档漂移修正）**：修正 alembic check 相关文档漂移——PR #25 已初始化 Alembic 并把 `alembic check` 加入 make check 与 CI，但正文 11 处仍写「待初始化/不进 make check」，与 §0/代码自相矛盾。本次同步：§3 目录树、§5.2（包含项 + 待加入→已加入）、§5.3、§9.2（Makefile/alembic.ini 行）、§9.3（Trivy 待加→已加）、§10（第 2/6 步 + 状态）、§12（风险标已解决）、§13、§14.4（改写为已启用）、附录 make check 行。历史版本笔记（v2.1/v2.4）保留为时间线日志
