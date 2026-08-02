@@ -1,9 +1,36 @@
 # Harness Engineering 工程门禁体系方案
 
-> **版本**：v2.5（v1 重构 + right-size + 评审修订 v2.1 + 原则沉淀 v2.3 + 实现细化 v2.4 + DX 补丁 v2.5）
-> **日期**：2026-08-01
-> **状态**：已定稿，待统一实施
+> **版本**：v2.6（v1 重构 + right-size + 评审修订 v2.1 + 原则沉淀 v2.3 + 实现细化 v2.4 + DX 补丁 v2.5 + 实施状态 v2.6）
+> **日期**：2026-08-02
+> **状态**：**已实施**（步骤 1-6、8 落地并入 main；步骤 5 可选跳过；派生物 CI 校验 / E2E / Trivy 见 §0 待办）
 > **定位**：智能问答平台（内部 RAG 应用）的工程基础设施总方案
+
+---
+
+## 0. 实施状态（v2.6，2026-08-02）
+
+> **本节为落地事实**，配置细节见各 § 及 [harness-setup-runbook.md](harness-setup-runbook.md)。
+
+| §10 步骤 | 内容 | 状态 | 落地证据（main sha） |
+|---|---|---|---|
+| ① 修 ci.yml 5 bug + CI 弄绿 | lint 走 pre-commit、lockfile、固定版本、bandit 阻断 | ✅ 完成 | CI green on main |
+| ② 分支保护 | **Ruleset**（非 classic）：0 approvals + enforce admins + 6 required checks | ✅ 完成 | 见 runbook §1 |
+| ③ 契约链 + 发版 | export-openapi + openapi-typescript + release-please | ✅ 完成 | PR #24 |
+| ④ 治理文件 | CODEOWNERS / PR 模板 / Issue 模板 / Dependabot | ✅ 完成 | PR #23 / dependabot.yml |
+| ⑤ 技能层 | skills/onboard-endpoint + 根索引 | ⏭️ 可选，跳过 | 按需再加 |
+| ⑥ Alembic 初始化 | env.py + 初始迁移 + alembic.ini URL 可配置 + alembic check 门禁 | ✅ 完成 | PR #25 |
+| ⑦ 总基准 + runbook | 本文件 + harness-setup-runbook.md | ✅ 本次完成 | 本 PR |
+| ⑧ 复核基线 | main `make check` 全绿 | ✅ CI 全绿已证 | CI green @ 97f575c |
+
+**CI 当前状态**（main）：`ci.yml` = ✅ success；`release-please.yml` = ❌ failure（见下）。
+
+**release-please 修复（本 PR）**：`release-type: python` 缺 `path`，在仓库根找不到 `pyproject.toml`（实际在 `backend/`）→ release-please 在 main 每次 push 红 X。本 PR 加 `path: backend`。**仍需手动开两个仓库设置**（Settings → Actions → Workflow permissions = read+write；Allow Actions to create PRs = 勾），否则依旧失败——见 [runbook §4.2](harness-setup-runbook.md)。
+
+**已知遗留（不阻断合并，见 runbook §7）**：
+- 派生物一致性 CI 校验（§14.3）待加：CI 重新生成 api-schema + `git diff --exit-code`。
+- E2E 测试（`e2e-test`）未稳定，非 required check。
+- 容器镜像扫描 Trivy（§6）待加。
+- Dependabot 安全告警需在 Settings 手动开启（runbook §3.2）。
 
 ---
 
@@ -259,14 +286,14 @@ when: 用户要求新增后端接口/路由时
 
 > 这是把「配置」变「强制」的**唯一手段**。没有它，前面所有门禁都可被 `--no-verify` 或直推 main 绕过。
 
-**main 分支保护规则**（配 remote 后在 GitHub 仓库设置）：
+**main 分支保护规则**（已落地，见 [harness-setup-runbook.md §1](harness-setup-runbook.md)）：
 - 禁止直推 main，必须 PR
-- PR 必过 CI（required status checks：§5.3 对齐 make check 的全部 job）
-- PR 必须至少 1 个 review，CODEOWNERS 触发的领域 owner 必审
-- linear history（禁 merge commit，rebase/squash）
-- 分支保护 + CODEOWNERS 规则详见 `docs/harness-setup-runbook.md`（实施时产出）
+- PR 必过 CI（required status checks：§5.3 对齐 make check 的全部 job，共 6 个）
+- **required approving reviews = 0**（单人项目：classic「至少 1 review」会让作者无法合并自己 PR，故改用 **Ruleset**，0 approvals + enforce for administrators，既强制 CI 又不卡自己）
+- linear history（squash）
+- 上述配置 + CODEOWNERS 规则 + 验证方法详见 `docs/harness-setup-runbook.md`
 
-**前置**：项目当前**无 git remote**，CI 从未运行。配 remote 是激活 CI / 分支保护 / Dependabot / release-please 的前提。
+**前置（已满足）**：git remote 已配（SSH-443），CI 已运行，分支保护已激活。
 
 ---
 
@@ -358,16 +385,21 @@ when: 用户要求新增后端接口/路由时
 | `backend/alembic.ini` | URL 可配置化（现硬编码开发库 `postgresql+asyncpg://...localhost:5432/rag_qa`）；补 env.py + 初始迁移（Alembic 初始化） |
 | `.gitignore` | 确认忽略 `.env` |
 
-### 9.3 平台设置（B 类，写 runbook，用户执行）
+### 9.3 平台设置（B 类，已写 runbook）
 
-1. **建 git remote**（GitHub 仓库）--一切前提
-2. **main 分支保护**：必过 CI / 禁直推 / 必 review / CODEOWNERS 生效 / linear history
-3. **Dependabot**：`dependabot.yml` 提交后自动生效，确认 alerts 开启
-4. Trivy / release-please：对应 workflow 提交后 CI 自动跑，无需额外账号
+> 详见 [harness-setup-runbook.md](harness-setup-runbook.md)。落地状态：
+
+1. ~~建 git remote~~ ✅（SSH-443，仓库 public）
+2. **main 分支保护** ✅：Ruleset（0 approvals + enforce admins + 6 required checks + squash）—— runbook §1
+3. **Dependabot** ✅ 配置生效：alerts/security updates 需在 Settings 手动开 —— runbook §3
+4. **release-please** ✅ 配置生效：需在 Settings 开 Workflow permissions + Allow Actions create PRs —— runbook §4
+5. Trivy：待加（见 §0 待办）
 
 ---
 
 ## 10. 实施顺序（统一实施，分批验证）
+
+> **落地状态见 §0**（步骤 1-6、8 ✅；步骤 5 ⏭️ 可选跳过）。以下为原计划顺序，保留作实施路径参照。
 
 1. **零风险增量**：`frontend/package-lock.json`、`.nvmrc`、`.editorconfig`、`.gitignore` 核对、根 `AGENTS.md`+`CLAUDE.md`、`tools/export-openapi.py`（含 mock env）、`docs/api-contracts/`、`docs/CONTRIBUTING.md`
 2. **门禁增强**：`.pre-commit-config.yaml`（卫生 + commit-msg + .env 钩子，vendor `tools/hooks/`）、`Makefile`（`security-check` + `gen-client` 目标；`setup-dev` 补宿主机工具 + 自检前置；`alembic check` 待初始化）、`ci.yml`（修 5 bug + 安装顺序 + `pre-commit run --all-files` 仅 lint + required check 对齐 make check + 派生物校验 + Trivy job）
@@ -511,3 +543,4 @@ make gen-client
 - **v2.3（2026-08-01，原则沉淀）**：吸收三份评审有效内核--派生物一致性升格为横切原则、门禁纯度（pip-audit/npm audit 移出 `make check` 成 `make security-check`）、契约派生而非手写、skills 工作流集合、`make check` 不碰开发库、CONTRIBUTING 端到端 onboarding、CI 安装顺序与卫生钩子用 PyYAML；RAG 评测门禁记入 backlog；消除 §3/§5.2/§9.2/§10/§13 间的前后矛盾
 - **v2.4（2026-08-01，实现细化）**：Alembic 修正（alembic check 移出 make check 待初始化、alembic.ini URL 可配置化、§2 DB schema 改「单一真相源」、§12 增风险、§10 增初始化步骤）；CI↔make check 对齐（required check 集 = make check 阻断项，lint 走 pre-commit 不替代 mypy/pytest，消除歧义）；OpenAPI 工具链（export 脚本无条件 mock env、openapi-typescript 进 devDep、派生物校验失败明确指引）；§4.5 加 Review Agent + 扩充工作流；setup-dev 自检、CONTRIBUTING pipx 前置、DB 隔离配置、镜像扫描衔接、mypy 分阶备注；再次通读消除 Alembic/CI 相关前后矛盾
 - **v2.5（2026-08-01，DX 补丁）**：增「Makefile 目标清单」附录（实施参考）；§13 标注当前阶段 alembic check 挂起；§16 DB schema 补「当前为 models」对齐 §2/§15
+- **v2.6（2026-08-02，实施状态）**：步骤 1-6、8 落地并入 main（CI green @ 97f575c），新增 §0 实施状态总览；分支保护确认用 **Ruleset**（0 approvals + enforce admins，单人硬门禁，纠正 §5.4「至少 1 review」歧义）；§9.3 B 类设置标注完成 + 指向 runbook；产出 `docs/harness-setup-runbook.md`（平台设置复现手册）；修复 release-please（`release-type: python` 缺 `path` 致 main 红 X → 加 `path: backend`，版本级 CHANGELOG 落 `backend/CHANGELOG.md`）；待办：派生物 CI 校验、E2E、Trivy、Dependabot alerts 手动开启
