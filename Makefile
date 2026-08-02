@@ -1,6 +1,6 @@
 # 智能问答平台
 
-.PHONY: help lint test security format clean
+.PHONY: help lint test security security-check format clean setup-dev check
 
 # 默认显示帮助
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "  make test              全部测试"
 	@echo "  make security          全部安全扫描"
 	@echo "  make check             完整门禁 (提交前必跑，与CI一致)"
+	@echo "  make security-check    依赖漏洞预检 (advisory，不阻断)"
 	@echo "  make setup-dev         安装开发工具 (首次使用)"
 	@echo "  make clean             清理缓存和构建产物"
 	@echo ""
@@ -104,11 +105,27 @@ check:
 
 # 安装开发工具（首次使用或容器重建后执行）
 setup-dev:
-	@echo "==> 容器内安装 lint/安全工具..."
+	@echo "==> [1/4] 自检宿主机前置..."
+	@command -v python >/dev/null 2>&1 || { echo "❌ 缺 Python（需 3.10+，推荐 3.11）。装好后重跑。"; exit 1; }
+	@command -v pip >/dev/null 2>&1 || { echo "❌ 缺 pip。"; exit 1; }
+	@command -v docker >/dev/null 2>&1 || { echo "❌ 缺 docker（容器跑 mypy/pytest 用）。"; exit 1; }
+	@echo "==> [2/4] 宿主机装 pre-commit 工具链（pip --user，版本对齐 requirements-dev.txt）..."
+	@pip install --user -r backend/requirements-dev.txt || { echo "⚠️ 宿主机 pip 安装失败（PEP 668？试 pipx，或加 --break-system-packages）。pre-commit 钩子需 ruff/black/isort/bandit/detect-secrets/pre-commit/pyyaml 在 PATH。"; }
+	@echo "==> [3/4] 容器内装 lint/安全工具..."
 	docker exec rag-qa-backend pip install -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -r /app/requirements-dev.txt
-	@echo "==> 本机启用 pre-commit 钩子（需本机已装 pre-commit/ruff/black/isort/bandit/detect-secrets）..."
+	@echo "==> [4/4] 装 git 钩子（pre-commit + commit-msg）+ 前端依赖..."
 	pre-commit install
-	@echo "==> 完成。commit 时将自动触发质量门禁。"
+	pre-commit install --hook-type commit-msg
+	cd frontend && npm ci
+	@echo "==> 完成。commit 触发秒级门禁；commit-msg 校验 Conventional Commits。"
+
+# 依赖漏洞 advisory 预检（不阻断 CI/门禁，主力靠 Dependabot）
+security-check:
+	@echo "==> [advisory，不阻断] 后端依赖漏洞（pip-audit）..."
+	@docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && pip-audit -r requirements.txt' || true
+	@echo "==> [advisory，不阻断] 前端依赖漏洞（npm audit）..."
+	@cd frontend && npm audit || true
+	@echo "==> 完成（advisory，有发现见上方输出；不阻断 CI/门禁）。"
 
 dev:
 	cd deployment && docker-compose up -d

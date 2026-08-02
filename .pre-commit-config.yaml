@@ -62,3 +62,24 @@ repos:
         entry: bash -c 'cd frontend && npx --no-install eslint --ext .vue,.ts,.tsx "${@#frontend/}"' --
         language: system
         files: '^frontend/.*\.(vue|ts|tsx)$'
+
+      # ===== 卫生钩子（拦截写坏的配置文件 + .env 守卫）=====
+      - id: check-yaml-json
+        name: YAML/JSON 校验
+        entry: python tools/hooks/check_yaml_json.py
+        language: system
+        files: '\.(yaml|yml|json)$'
+        exclude: 'package-lock\.json$'
+
+      - id: check-env-guard
+        name: .env 提交守卫
+        entry: bash tools/hooks/check_env_guard.sh
+        language: system
+        pass_filenames: true
+
+      # ===== commit-msg（Conventional Commits，release-please 依赖）=====
+      - id: check-commit-msg
+        name: Conventional Commits
+        entry: bash tools/hooks/check_commit_msg.sh
+        language: system
+        stages: [commit-msg]
