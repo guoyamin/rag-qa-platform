@@ -1,6 +1,7 @@
 # Dependabot 依赖更新配置
 # 提交后自动生效；告警在 Settings > Code security 查看。
 # 范围：后端 pip、前端 npm、GitHub Actions workflow 版本。频率：每周。
+# 仅自动提 minor/patch（semver-major 忽略，避免大版本破坏构建；大版本升级人工评估后手动做）。
 version: 2
 updates:
   - package-ecosystem: "pip"
@@ -12,6 +13,9 @@ updates:
     labels:
       - "dependencies"
       - "backend"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -22,6 +26,9 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -31,3 +38,6 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
