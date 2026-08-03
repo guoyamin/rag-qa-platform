@@ -7,6 +7,9 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# 导出公告 schemas
+from app.schemas.announcement import *  # noqa: F401, F403
+
 # 导出模型管理 schemas
 from app.schemas.model import *  # noqa: F401, F403
 

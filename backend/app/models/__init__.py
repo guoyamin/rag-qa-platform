@@ -1,5 +1,6 @@
 # 模型模块
 from app.models.ab_test import ABExperiment, ABGroup, ABResult
+from app.models.announcement import Announcement, AnnouncementStatus, AnnouncementType
 from app.models.api_key import ApiKey, ApiKeyStatus, ApiKeyUsage
 from app.models.audit_log import AuditAction, AuditLevel, AuditLog
 from app.models.cost_alert import CostAlert
@@ -21,6 +22,9 @@ __all__ = [
     "ABExperiment",
     "ABGroup",
     "ABResult",
+    "Announcement",
+    "AnnouncementStatus",
+    "AnnouncementType",
     "ApiKey",
     "ApiKeyStatus",
     "ApiKeyUsage",

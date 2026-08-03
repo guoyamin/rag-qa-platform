@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from app.api.v1 import (
+    announcement,
     auth,
     chat,
     document,
@@ -30,6 +31,7 @@ from app.models import (  # noqa: F401
     ABExperiment,
     ABGroup,
     ABResult,
+    Announcement,
     ApiKey,
     AuditLog,
     CircuitBreakerState,
@@ -108,6 +110,7 @@ def create_app() -> FastAPI:
     app.include_router(model.router, prefix="/api/v1")
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(stats.router, prefix="/api/v1")
+    app.include_router(announcement.router, prefix="/api/v1")
 
     @app.get("/health", tags=["健康检查"])
     async def health_check() -> dict[str, str]:

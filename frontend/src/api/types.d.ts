@@ -811,6 +811,78 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/announcements': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Announcements
+     * @description 获取公告列表（管理员）
+     */
+    get: operations['list_announcements_api_v1_announcements_get']
+    put?: never
+    /**
+     * Create Announcement
+     * @description 创建公告（管理员）
+     */
+    post: operations['create_announcement_api_v1_announcements_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/announcements/{announcement_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Announcement
+     * @description 获取公告详情（管理员）
+     */
+    get: operations['get_announcement_api_v1_announcements__announcement_id__get']
+    /**
+     * Update Announcement
+     * @description 更新公告（管理员）
+     */
+    put: operations['update_announcement_api_v1_announcements__announcement_id__put']
+    post?: never
+    /**
+     * Delete Announcement
+     * @description 删除公告（管理员，软删）
+     */
+    delete: operations['delete_announcement_api_v1_announcements__announcement_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/announcements/{announcement_id}/publish': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Publish Announcement
+     * @description 发布公告（管理员）
+     */
+    put: operations['publish_announcement_api_v1_announcements__announcement_id__publish_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/health': {
     parameters: {
       query?: never
@@ -855,6 +927,101 @@ export interface paths {
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    /**
+     * AnnouncementCreate
+     * @description 创建公告
+     */
+    AnnouncementCreate: {
+      /**
+       * Title
+       * @description 公告标题
+       */
+      title: string
+      /**
+       * Content
+       * @description 公告正文
+       */
+      content: string
+      /**
+       * @description 公告类型
+       * @default notice
+       */
+      type: components['schemas']['AnnouncementType']
+      /**
+       * Pinned
+       * @description 是否置顶
+       * @default false
+       */
+      pinned: boolean
+    }
+    /**
+     * AnnouncementListResponse
+     * @description 公告列表响应
+     */
+    AnnouncementListResponse: {
+      /** Items */
+      items: components['schemas']['AnnouncementResponse'][]
+      /** Total */
+      total: number
+      /** Page */
+      page: number
+      /** Page Size */
+      page_size: number
+    }
+    /**
+     * AnnouncementResponse
+     * @description 公告响应
+     */
+    AnnouncementResponse: {
+      /** Id */
+      id: string
+      /** Title */
+      title: string
+      /** Content */
+      content: string
+      type: components['schemas']['AnnouncementType']
+      status: components['schemas']['AnnouncementStatus']
+      /** Pinned */
+      pinned: boolean
+      /** Published At */
+      published_at?: string | null
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /**
+     * AnnouncementStatus
+     * @description 公告状态
+     * @enum {string}
+     */
+    AnnouncementStatus: 'draft' | 'published' | 'archived'
+    /**
+     * AnnouncementType
+     * @description 公告类型
+     * @enum {string}
+     */
+    AnnouncementType: 'notice' | 'maintenance' | 'update'
+    /**
+     * AnnouncementUpdate
+     * @description 更新公告
+     */
+    AnnouncementUpdate: {
+      /** Title */
+      title?: string | null
+      /** Content */
+      content?: string | null
+      type?: components['schemas']['AnnouncementType'] | null
+      status?: components['schemas']['AnnouncementStatus'] | null
+      /** Pinned */
+      pinned?: boolean | null
+    }
     /**
      * ApiKeyCreate
      * @description 创建 API Key 请求
@@ -3174,6 +3341,199 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['RankingResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_announcements_api_v1_announcements_get: {
+    parameters: {
+      query?: {
+        status?: components['schemas']['AnnouncementStatus'] | null
+        type?: components['schemas']['AnnouncementType'] | null
+        page?: number
+        page_size?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AnnouncementListResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_announcement_api_v1_announcements_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AnnouncementCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AnnouncementResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_announcement_api_v1_announcements__announcement_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        announcement_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AnnouncementResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_announcement_api_v1_announcements__announcement_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        announcement_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AnnouncementUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AnnouncementResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_announcement_api_v1_announcements__announcement_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        announcement_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  publish_announcement_api_v1_announcements__announcement_id__publish_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        announcement_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AnnouncementResponse']
         }
       }
       /** @description Validation Error */
