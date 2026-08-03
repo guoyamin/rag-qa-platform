@@ -506,7 +506,7 @@
           "智能问答"
         ],
         "summary": "Chat Completion",
-        "description": "智能问答（非流式）\n\n- **message**: 用户问题\n- **session_id**: 会话ID，为空则新建会话\n- **kb_ids**: 指定知识库ID列表",
+        "description": "智能问答（非流式）\n\n- **message**: 用户问题\n- **session_id**: 会话ID，为空则新建会话\n- **kb_ids**: 指定知识库ID列表\n\n返回中含 **message_id**（assistant 回答的ID）与 **session_id**，\n前端可用 message_id 对该回答提交反馈。",
         "operationId": "chat_completion_api_v1_chat_completions_post",
         "requestBody": {
           "content": {
@@ -553,7 +553,7 @@
           "智能问答"
         ],
         "summary": "Chat Completion Stream",
-        "description": "智能问答（流式）\n使用SSE格式返回",
+        "description": "智能问答（流式）\n使用SSE格式返回\n\n注：流式接口暂不落库消息，前端反馈需用非流式接口返回的 message_id。",
         "operationId": "chat_completion_stream_api_v1_chat_completions_stream_post",
         "requestBody": {
           "content": {
@@ -625,7 +625,7 @@
           "智能问答"
         ],
         "summary": "Delete Session",
-        "description": "删除会话",
+        "description": "删除会话（软删，含其消息）",
         "operationId": "delete_session_api_v1_chat_sessions__session_id__delete",
         "security": [
           {
@@ -673,7 +673,7 @@
           "智能问答"
         ],
         "summary": "Submit Feedback",
-        "description": "提交消息反馈",
+        "description": "提交消息反馈（点赞/点踩 + 文字反馈）",
         "operationId": "submit_feedback_api_v1_chat_feedback_post",
         "requestBody": {
           "content": {

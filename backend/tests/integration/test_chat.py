@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import create_access_token, get_password_hash
 from app.llm.base import LLMResponse
 from app.main import app
+from app.models.chat import ChatMessage, ChatSession
 from app.models.user import User, UserAuthType, UserRole, UserStatus
 from app.rag.pipeline import RAGPipeline
 
@@ -50,6 +51,26 @@ async def _create_user_and_token(
     await db_session.commit()
     await db_session.refresh(user)
     return user, create_access_token(user.id)
+
+
+async def _create_session_in_db(db_session: AsyncSession, user_id: str) -> ChatSession:
+    """在测试库创建会话（自动生成 id）。"""
+    session = ChatSession(user_id=user_id)
+    db_session.add(session)
+    await db_session.commit()
+    await db_session.refresh(session)
+    return session
+
+
+async def _create_message_in_db(
+    db_session: AsyncSession, session_id: str, role: str = "assistant"
+) -> ChatMessage:
+    """在测试库创建消息（自动生成 id）。"""
+    message = ChatMessage(session_id=session_id, role=role, content="测试回答")
+    db_session.add(message)
+    await db_session.commit()
+    await db_session.refresh(message)
+    return message
 
 
 @pytest.fixture
@@ -260,6 +281,32 @@ class TestChatAPI:
         assert resp.status_code == 200
         assert resp.json()["data"]["answer"] == "这是模拟回答"
 
+    async def test_completion_persists_message_and_returns_ids(
+        self, client, db_session, rag_pipeline
+    ):
+        # Arrange
+        _, token = await _create_user_and_token(db_session, username="persist")
+        # Act
+        resp = await client.post(
+            "/api/v1/chat/completions",
+            json={"message": "公司制度"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        # Assert
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert "message_id" in data
+        assert "session_id" in data
+        # 验证消息落库
+        from sqlalchemy import select
+
+        result = await db_session.execute(
+            select(ChatMessage).where(ChatMessage.id == data["message_id"])
+        )
+        persisted = result.scalar_one()
+        assert persisted.role == "assistant"
+        assert persisted.content == "这是模拟回答"
+
     # --- POST /chat/completions/stream ---
 
     async def test_stream_without_token_returns_401(self, client):
@@ -314,6 +361,27 @@ class TestChatAPI:
         assert body["data"] == []
         assert body["total"] == 0
 
+    async def test_list_sessions_returns_sessions_after_completion(
+        self, client, db_session, rag_pipeline
+    ):
+        # Arrange：先 completions 创建会话
+        _, token = await _create_user_and_token(db_session, username="lister")
+        await client.post(
+            "/api/v1/chat/completions",
+            json={"message": "测试"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        # Act
+        resp = await client.get(
+            "/api/v1/chat/sessions",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        # Assert
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["total"] == 1
+        assert body["data"][0]["message_count"] == 2  # user + assistant
+
     # --- DELETE /chat/sessions/{session_id} ---
 
     async def test_delete_session_without_token_returns_401(self, client):
@@ -323,17 +391,32 @@ class TestChatAPI:
         assert resp.status_code == 401
         assert resp.json()["code"] == "AUTHENTICATION_ERROR"
 
-    async def test_delete_session_returns_success(self, client, db_session):
-        # Arrange
-        _, token = await _create_user_and_token(db_session, username="deleter")
+    async def test_delete_session_existing_returns_success(self, client, db_session):
+        # Arrange：创建用户 + 会话
+        user, token = await _create_user_and_token(db_session, username="deleter")
+        session = await _create_session_in_db(db_session, user.id)
         # Act
         resp = await client.delete(
-            "/api/v1/chat/sessions/some-id",
+            f"/api/v1/chat/sessions/{session.id}",
             headers={"Authorization": f"Bearer {token}"},
         )
         # Assert
         assert resp.status_code == 200
         assert resp.json()["message"] == "删除成功"
+        # 验证软删
+        await db_session.refresh(session)
+        assert session.is_deleted is True
+
+    async def test_delete_session_not_found_returns_404(self, client, db_session):
+        # Arrange
+        _, token = await _create_user_and_token(db_session, username="del404")
+        # Act
+        resp = await client.delete(
+            "/api/v1/chat/sessions/nonexistent",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        # Assert
+        assert resp.status_code == 404
 
     # --- POST /chat/feedback ---
 
@@ -347,18 +430,36 @@ class TestChatAPI:
         assert resp.status_code == 401
         assert resp.json()["code"] == "AUTHENTICATION_ERROR"
 
-    async def test_feedback_success_returns_message(self, client, db_session):
-        # Arrange
-        _, token = await _create_user_and_token(db_session, username="feedback")
+    async def test_feedback_success_persists_is_liked(self, client, db_session):
+        # Arrange：创建用户 + 会话 + 消息
+        user, token = await _create_user_and_token(db_session, username="feedback")
+        session = await _create_session_in_db(db_session, user.id)
+        message = await _create_message_in_db(db_session, session.id)
         # Act
         resp = await client.post(
             "/api/v1/chat/feedback",
-            json={"message_id": "msg-1", "is_liked": True, "feedback": "很有帮助"},
+            json={"message_id": message.id, "is_liked": True, "feedback": "很有帮助"},
             headers={"Authorization": f"Bearer {token}"},
         )
         # Assert
         assert resp.status_code == 200
         assert resp.json()["message"] == "反馈提交成功"
+        # 验证落库
+        await db_session.refresh(message)
+        assert message.is_liked is True
+        assert message.feedback == "很有帮助"
+
+    async def test_feedback_message_not_found_returns_404(self, client, db_session):
+        # Arrange
+        _, token = await _create_user_and_token(db_session, username="fb404")
+        # Act
+        resp = await client.post(
+            "/api/v1/chat/feedback",
+            json={"message_id": "nonexistent-msg", "is_liked": True},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        # Assert
+        assert resp.status_code == 404
 
     async def test_feedback_missing_message_id_returns_422(self, client, db_session):
         # Arrange

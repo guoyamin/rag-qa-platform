@@ -196,6 +196,9 @@ export interface paths {
      *     - **message**: 用户问题
      *     - **session_id**: 会话ID，为空则新建会话
      *     - **kb_ids**: 指定知识库ID列表
+     *
+     *     返回中含 **message_id**（assistant 回答的ID）与 **session_id**，
+     *     前端可用 message_id 对该回答提交反馈。
      */
     post: operations['chat_completion_api_v1_chat_completions_post']
     delete?: never
@@ -217,6 +220,8 @@ export interface paths {
      * Chat Completion Stream
      * @description 智能问答（流式）
      *     使用SSE格式返回
+     *
+     *     注：流式接口暂不落库消息，前端反馈需用非流式接口返回的 message_id。
      */
     post: operations['chat_completion_stream_api_v1_chat_completions_stream_post']
     delete?: never
@@ -257,7 +262,7 @@ export interface paths {
     post?: never
     /**
      * Delete Session
-     * @description 删除会话
+     * @description 删除会话（软删，含其消息）
      */
     delete: operations['delete_session_api_v1_chat_sessions__session_id__delete']
     options?: never
@@ -276,7 +281,7 @@ export interface paths {
     put?: never
     /**
      * Submit Feedback
-     * @description 提交消息反馈
+     * @description 提交消息反馈（点赞/点踩 + 文字反馈）
      */
     post: operations['submit_feedback_api_v1_chat_feedback_post']
     delete?: never
