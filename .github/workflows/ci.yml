@@ -324,6 +324,7 @@ jobs:
   e2e-test:
     name: E2E Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # 兜底防挂死（Playwright/服务启动卡住时，避免跑到 6h 默认上限）
     needs: [backend-unit-test, frontend-test]
     if: github.event_name == 'pull_request'
 
@@ -376,6 +377,9 @@ jobs:
       - name: Run E2E tests
         run: npx playwright test
         working-directory: frontend
+        env:
+          # 前端 preview 起在 4173，对齐 baseURL（playwright.config 默认 5173，不设会 ERR_CONNECTION_REFUSED）
+          E2E_BASE_URL: "http://localhost:4173"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -383,3 +387,11 @@ jobs:
         with:
           name: playwright-report
           path: frontend/playwright-report/
+
+      - name: Upload Playwright traces
+        # trace: 'on-first-retry' 仅在用例失败重试时生成，故只在失败时上传
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: frontend/test-results/
