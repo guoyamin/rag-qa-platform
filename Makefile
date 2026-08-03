@@ -37,24 +37,24 @@ help:
 # 后端
 # ============================================
 # ============================================
-# 后端（在容器 rag-qa-backend 内执行：Python 3.11 + 全依赖）
+# 后端（在容器 rag_qa_platform-backend 内执行：Python 3.11 + 全依赖）
 # 首次使用先 `make setup-dev` 在容器内安装 lint/安全工具
 # ============================================
 lint-backend:
 	@echo "==> 后端代码检查 (ruff + black + isort + mypy)..."
-	docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && ruff check app tests && black --check app tests && isort --check-only app tests && mypy --strict app'
+	docker exec rag_qa_platform-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && ruff check app tests && black --check app tests && isort --check-only app tests && mypy --strict app'
 
 format-backend:
 	@echo "==> 格式化后端代码 (black + isort)..."
-	docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && black app tests && isort app tests'
+	docker exec rag_qa_platform-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && black app tests && isort app tests'
 
 test-backend:
 	@echo "==> 运行后端测试 (单元 + 集成)..."
-	docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && pytest -v --cov=app --cov-report=term-missing'
+	docker exec rag_qa_platform-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && pytest -v --cov=app --cov-report=term-missing'
 
 security-backend:
 	@echo "==> 后端安全扫描 (bandit + detect-secrets)..."
-	docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && bandit -ll -c .bandit -r app/'
+	docker exec rag_qa_platform-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && bandit -ll -c .bandit -r app/'
 	@echo "==> 密钥泄露检查 (detect-secrets, 基于基线)..."
 	detect-secrets-hook --baseline .secrets.baseline
 
@@ -99,7 +99,7 @@ security: security-backend
 # 完整质量门禁（提交前必跑，与 CI 一致）：后端 lint+类型+测试+安全 + 前端 类型+lint+单测
 check:
 	@echo "==> [1/2] 后端门禁（容器内）：ruff + black + isort + mypy + bandit + pytest + alembic check..."
-	docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && ruff check app tests && black --check app tests && isort --check-only app tests && mypy --strict app && bandit -ll -c .bandit -r app/ && pytest -v --cov=app --cov-report=term-missing && export DATABASE_URL=sqlite+aiosqlite:///./_alembic_check.db && alembic upgrade head && alembic check && rm -f _alembic_check.db'
+	docker exec rag_qa_platform-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && ruff check app tests && black --check app tests && isort --check-only app tests && mypy --strict app && bandit -ll -c .bandit -r app/ && pytest -v --cov=app --cov-report=term-missing && export DATABASE_URL=sqlite+aiosqlite:///./_alembic_check.db && alembic upgrade head && alembic check && rm -f _alembic_check.db'
 	@echo "==> [2/2] 前端门禁：vue-tsc + eslint + vitest..."
 	cd frontend && npm run type-check && npm run lint && npm run test:unit -- --run
 	@echo "==> 全部门禁通过"
@@ -113,7 +113,7 @@ setup-dev:
 	@echo "==> [2/4] 宿主机装 pre-commit 工具链（pip --user，版本对齐 requirements-dev.txt）..."
 	@pip install --user -r backend/requirements-dev.txt || { echo "⚠️ 宿主机 pip 安装失败（PEP 668？试 pipx，或加 --break-system-packages）。pre-commit 钩子需 ruff/black/isort/bandit/detect-secrets/pre-commit/pyyaml 在 PATH。"; }
 	@echo "==> [3/4] 容器内装 lint/安全工具..."
-	docker exec rag-qa-backend pip install -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -r /app/requirements-dev.txt
+	docker exec rag_qa_platform-backend pip install -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -r /app/requirements-dev.txt
 	@echo "==> [4/4] 装 git 钩子（pre-commit + commit-msg）+ 前端依赖..."
 	pre-commit install
 	pre-commit install --hook-type commit-msg
@@ -123,7 +123,7 @@ setup-dev:
 # 依赖漏洞 advisory 预检（不阻断 CI/门禁，主力靠 Dependabot）
 security-check:
 	@echo "==> [advisory，不阻断] 后端依赖漏洞（pip-audit）..."
-	@docker exec rag-qa-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && pip-audit -r requirements.txt' || true
+	@docker exec rag_qa_platform-backend bash -lc 'export PATH=/home/appuser/.local/bin:$$PATH && cd /app && pip-audit -r requirements.txt' || true
 	@echo "==> [advisory，不阻断] 前端依赖漏洞（npm audit）..."
 	@cd frontend && npm audit || true
 	@echo "==> 完成（advisory，有发现见上方输出；不阻断 CI/门禁）。"

@@ -1,10 +1,10 @@
-version: "3.8"
+name: rag_qa_platform
 
 services:
   # === PostgreSQL ===
   postgres:
     image: postgres:16-alpine
-    container_name: rag-qa-postgres
+    container_name: rag_qa_platform-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: rag_qa
@@ -23,7 +23,7 @@ services:
   # === Redis ===
   redis:
     image: redis:7-alpine
-    container_name: rag-qa-redis
+    container_name: rag_qa_platform-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -35,7 +35,7 @@ services:
 
   # === Milvus (简化版，开发用) ===
   etcd:
-    container_name: rag-qa-etcd
+    container_name: rag_qa_platform-etcd
     image: quay.io/coreos/etcd:v3.5.5
     environment:
       - ETCD_AUTO_COMPACTION_MODE=revision
@@ -46,7 +46,7 @@ services:
     command: etcd -advertise-client-urls http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
 
   minio:
-    container_name: rag-qa-minio
+    container_name: rag_qa_platform-minio
     image: minio/minio:RELEASE.2023-03-20T20-16-18Z
     environment:
       MINIO_ACCESS_KEY: minioadmin
@@ -61,7 +61,7 @@ services:
       retries: 3
 
   milvus:
-    container_name: rag-qa-milvus
+    container_name: rag_qa_platform-milvus
     image: milvusdb/milvus:v2.4.5
     command: ["milvus", "run", "standalone"]
     environment:
@@ -81,7 +81,7 @@ services:
       context: ../backend
       dockerfile: Dockerfile.dev
     image: deployment-backend:dev
-    container_name: rag-qa-backend
+    container_name: rag_qa_platform-backend
     restart: unless-stopped
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/rag_qa
@@ -114,7 +114,7 @@ services:
       context: ../frontend
       dockerfile: Dockerfile.dev
     image: deployment-frontend:dev
-    container_name: rag-qa-frontend
+    container_name: rag_qa_platform-frontend
     restart: unless-stopped
     # 启动时安装依赖（package.json 变化如新增 dompurify 会自动安装），再启动 dev server
     command: sh -c "npm install && npm run dev -- --host"
