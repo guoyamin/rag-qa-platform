@@ -25,6 +25,8 @@ services:
     image: redis:7-alpine
     container_name: rag_qa_platform-redis
     restart: unless-stopped
+    volumes:
+      - redis_data:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -80,7 +82,7 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile.dev
-    image: deployment-backend:dev
+    image: rag_qa_platform-backend:dev
     container_name: rag_qa_platform-backend
     restart: unless-stopped
     environment:
@@ -113,7 +115,7 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile.dev
-    image: deployment-frontend:dev
+    image: rag_qa_platform-frontend:dev
     container_name: rag_qa_platform-frontend
     restart: unless-stopped
     # 启动时安装依赖（package.json 变化如新增 dompurify 会自动安装），再启动 dev server
@@ -135,6 +137,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   etcd_data:
   minio_data:
   milvus_data:
