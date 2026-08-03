@@ -73,9 +73,10 @@
 
 | 文档 | 文件路径 | 内容 |
 |------|----------|------|
-| 测试策略规范 | `docs/TEST_STRATEGY.md` | 测试金字塔、用例规范、数据管理 |
-| 安全合规基线 | `docs/SECURITY_BASELINE.md` | 安全基线、数据分级、AI安全提醒 |
-| AI协作规则 | `docs/AI_COLLABORATION_RULES.md` | 决策边界、变更清单、自检清单、协作节奏 |
+| 测试策略规范 | `docs/standards/testing.md` | 测试金字塔、用例规范、数据管理 |
+| 安全合规基线 | `docs/standards/security.md` | 安全基线、数据分级、AI安全提醒 |
+| AI协作规则 | `docs/knowledge/ai-collaboration.md` | 决策边界、变更清单、自检清单、协作节奏 |
+| API 契约 | `docs/standards/api-contract.md` | 接口设计、错误码、分页、流式 |
 | 架构决策记录 | `docs/adr/` | ADR索引及模板 |
 
 ---
@@ -126,19 +127,25 @@
 
 ```
 docs/
-├── CODING_STANDARD.md          ← 本文档（总纲）
-├── TEST_STRATEGY.md            ← 测试策略
-├── SECURITY_BASELINE.md        ← 安全合规
-├── AI_COLLABORATION_RULES.md   ← AI协作规则
-├── API.md                      ← 接口文档
-├── deployment.md               ← 部署文档
+├── standards/                  ← 规范层
+│   ├── coding-standard.md      ← 本文档（总纲）
+│   ├── api-contract.md         ← API 契约
+│   ├── security.md             ← 安全合规
+│   └── testing.md              ← 测试策略
+├── knowledge/                  ← 知识层
+│   ├── ai-collaboration.md     ← AI协作规则
+│   ├── glossary.md             ← 业务术语
+│   └── lessons-learned/        ← 经验复盘
+├── runbooks/                   ← 操作手册
+│   ├── deployment.md           ← 部署文档
+│   └── harness-setup.md        ← Harness 平台设置
+├── architecture/               ← 架构设计 + 模块地图(module-map.md)
+├── modules/                    ← 模块资产（rag/llm/services 详解）
 ├── adr/                        ← 架构决策记录
 │   ├── README.md
 │   └── template.md
-├── templates/                  ← 模板文件
-│   └── change-list.md
-└── architecture/               ← 架构设计文档
-    └── README.md
+└── templates/                  ← 模板文件
+    └── change-list.md
 ```
 
 ---
@@ -527,14 +534,14 @@ AI生成代码存在特定风险，增加以下专项检查，作为工具链覆
 
 | 文档类型 | 存放路径 | 维护主体 | 更新时机 |
 |----------|----------|----------|----------|
-| 编码规范 | `docs/CODING_STANDARD.md` | 用户 | 规范变更时 |
-| 测试策略 | `docs/TEST_STRATEGY.md` | 用户/AI | 测试策略变更时 |
-| 安全基线 | `docs/SECURITY_BASELINE.md` | 用户 | 安全策略变更时 |
-| AI协作规则 | `docs/AI_COLLABORATION_RULES.md` | 用户 | 协作方式变更时 |
+| 编码规范 | `docs/standards/coding-standard.md` | 用户 | 规范变更时 |
+| 测试策略 | `docs/standards/testing.md` | 用户/AI | 测试策略变更时 |
+| 安全基线 | `docs/standards/security.md` | 用户 | 安全策略变更时 |
+| AI协作规则 | `docs/knowledge/ai-collaboration.md` | 用户 | 协作方式变更时 |
 | 架构决策记录 | `docs/adr/` | AI | 做决策时 |
 | 架构设计文档 | `docs/architecture/` | AI编写，用户确认 | 架构变更时 |
-| API接口文档 | 自动生成 + `docs/API.md` | AI | 接口变更时 |
-| 部署文档 | `docs/deployment.md` | AI | 部署变更时 |
+| API接口文档 | 自动生成 + `docs/standards/api-contract.md` | AI | 接口变更时 |
+| 部署文档 | `docs/runbooks/deployment.md` | AI | 部署变更时 |
 | 操作手册 | `docs/operation/` | 用户 | 功能上线时 |
 | README | `README.md` | AI | 项目结构变更时 |
 | 变更清单模板 | `docs/templates/change-list.md` | AI | 模板更新时 |
@@ -549,7 +556,7 @@ AI生成代码存在特定风险，增加以下专项检查，作为工具链覆
 ### 6.3 API文档规范
 
 - 基础文档：FastAPI自动生成的OpenAPI文档（Swagger UI / ReDoc）
-- 补充文档：复杂业务接口在`docs/API.md`中补充说明
+- 补充文档：复杂业务接口在`docs/standards/api-contract.md`中补充说明
 - 变更同步：接口变更（URL、请求/响应字段）必须同步更新文档
 - 文档与代码一致性：以代码中的Pydantic Schema为唯一真相源
 

@@ -155,35 +155,52 @@
 
 ### 4.1 后端模块
 
+> 模块资产详见 [modules/](../modules/)（rag / llm / services 详解），快速定位见 [module-map.md](module-map.md)。
+
 ```
 backend/app/
-├── api/v1/          ← API路由层（HTTP协议处理）
-│   ├── auth.py      ← 认证相关API
-│   ├── user.py      ← 用户管理API
-│   ├── chat.py      ← 智能问答API
-│   ├── knowledge.py ← 知识库管理API
-│   └── document.py  ← 文档管理API
-├── core/            ← 核心配置
-│   ├── config.py    ← 应用配置
-│   ├── security.py  ← JWT/密码加密
-│   └── exceptions.py ← 自定义异常
+├── api/v1/          ← API 路由层（HTTP 协议处理，前缀 /api/v1）
+│   ├── auth.py        ← 认证（登录/JWT）
+│   ├── user.py        ← 用户管理
+│   ├── chat.py        ← 智能问答（调 RAGPipeline）
+│   ├── knowledge.py   ← 知识库管理
+│   ├── document.py    ← 文档上传/管理（ingestion）
+│   ├── model.py       ← 模型实例管理
+│   ├── template.py    ← 预设模板
+│   ├── stats.py       ← 用量统计
+│   └── health.py      ← 健康检查
+├── core/            ← 核心基础设施
+│   ├── config.py      ← 应用配置（settings）
+│   ├── security.py    ← JWT / 密码加密
+│   └── exceptions.py  ← 自定义异常（BaseAppException → http_status + code）
 ├── db/              ← 数据库
-│   ├── base.py      ← 模型基类
-│   └── session.py   ← 会话管理
-├── models/          ← 数据模型
-│   ├── user.py      ← 用户模型
-│   └── document.py  ← 文档/知识库模型
-├── schemas/         ← Pydantic校验模型
-├── services/        ← 业务服务层
-│   └── auth_service.py ← 认证服务
-├── rag/             ← RAG核心模块
-│   ├── pipeline.py  ← RAG流程编排
-│   └── retriever.py ← 向量检索
-└── llm/             ← LLM适配层
-    ├── base.py      ← 抽象接口
-    ├── openai_compatible.py ← OpenAI兼容API
-    └── local_model.py ← 私有化模型
+│   ├── base.py        ← SQLAlchemy 模型基类
+│   ├── session.py     ← engine / session
+│   └── migrations/    ← alembic 迁移
+├── models/          ← SQLAlchemy 数据模型（13 个：user / document / model_instance /
+│                    ←   model_version / ab_test / api_key / audit_log / cost_alert /
+│                    ←   health_log / rate_limit / router / usage_log / preset_template）
+├── schemas/         ← Pydantic 校验模型（当前仅 model.py，其余内联路由）
+├── services/        ← 业务服务层（LLM 网关 / 智能路由核心，15 个 service）
+│   ├── 智能路由域     ← router_service / ab_test_service
+│   ├── 模型管理域     ← model_service / llm_manager / version_service / template_service
+│   ├── 可靠性域       ← circuit_breaker / rate_limit / health_check
+│   ├── 成本域         ← usage_stats / cost_alert
+│   ├── 认证鉴权域     ← auth / api_key / audit
+│   └── 基础设施域     ← vault_client
+├── rag/             ← RAG 核心模块（详见 ../modules/rag.md）
+│   ├── pipeline.py    ← RAG 流程编排（检索→构建→生成）
+│   └── retriever.py   ← Milvus 向量检索
+├── llm/             ← LLM 适配层（详见 ../modules/llm.md）
+│   ├── base.py        ← 抽象接口 + LLMFactory
+│   ├── openai_compatible.py ← OpenAI / 通义千问
+│   └── local_model.py ← vLLM / TGI / Ollama
+├── scripts/         ← 运维脚本（init_admin.py）
+├── tasks/           ← （预留，当前空）
+└── utils/           ← （预留，当前空）
 ```
+
+> **注**：本平台不只是 RAG 问答，`services/` 层实现了完整的 **LLM 网关 / 智能路由**（多模型管理、复杂度路由、AB 测试、限流熔断、成本管控、健康监控）。详见 [modules/services.md](../modules/services.md)。
 
 ### 4.2 前端模块
 
@@ -244,13 +261,15 @@ Kubernetes / Docker Swarm
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| 编码规范 | `../CODING_STANDARD.md` | 项目规范总纲 |
-| 测试策略 | `../TEST_STRATEGY.md` | 测试规范 |
-| 安全基线 | `../SECURITY_BASELINE.md` | 安全规范 |
-| AI协作规则 | `../AI_COLLABORATION_RULES.md` | AI协作规范 |
-| 架构决策记录 | `../adr/` | ADR索引及详情 |
-| API文档 | `../API.md` | 接口说明 |
-| 部署文档 | `../deployment.md` | 部署指南 |
+| 模块地图 | `module-map.md` | 模块快速定位 |
+| 模块资产 | `../modules/` | rag/llm/services 详解 |
+| 编码规范 | `../standards/coding-standard.md` | 项目规范总纲 |
+| API 契约 | `../standards/api-contract.md` | 接口设计规范 |
+| 测试策略 | `../standards/testing.md` | 测试规范 |
+| 安全基线 | `../standards/security.md` | 安全规范 |
+| 知识库 | `../knowledge/` | 术语/ADR/复盘/AI协作 |
+| 架构决策记录 | `../adr/` | ADR 索引及详情 |
+| 部署文档 | `../runbooks/deployment.md` | 部署指南 |
 
 ---
 
