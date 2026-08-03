@@ -80,6 +80,7 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile.dev
+    image: deployment-backend:dev
     container_name: rag-qa-backend
     restart: unless-stopped
     environment:
@@ -112,6 +113,7 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile.dev
+    image: deployment-frontend:dev
     container_name: rag-qa-frontend
     restart: unless-stopped
     # 启动时安装依赖（package.json 变化如新增 dompurify 会自动安装），再启动 dev server

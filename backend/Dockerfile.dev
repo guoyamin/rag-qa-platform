@@ -5,32 +5,14 @@ FROM python:3.11
 WORKDIR /app
 
 # 先复制依赖文件，利用Docker缓存层
-COPY requirements.txt .
+COPY requirements.txt requirements-dev.txt .
 # 使用国内 PyPI 镜像源 + 增加超时和重试
+# 运行时+测试依赖（requirements.txt）与 lint/安全工具（requirements-dev.txt，锁定版本，与 CI 同源）
 RUN pip install --no-cache-dir \
     -i https://pypi.tuna.tsinghua.edu.cn/simple \
     --timeout 120 \
     --retries 5 \
-    -r requirements.txt
-
-# 安装开发工具（仅在开发镜像中包含）
-RUN pip install --no-cache-dir \
-    -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    --timeout 120 \
-    --retries 5 \
-    black \
-    isort \
-    ruff \
-    mypy \
-    pytest \
-    pytest-asyncio \
-    pytest-cov \
-    factory-boy \
-    faker \
-    httpx \
-    respx \
-    bandit \
-    detect-secrets
+    -r requirements.txt -r requirements-dev.txt
 
 # 暴露端口
 EXPOSE 8000

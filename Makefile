@@ -31,7 +31,7 @@ help:
 	@echo "开发命令:"
 	@echo "  make dev-backend       启动后端开发服务器"
 	@echo "  make dev-frontend      启动前端开发服务器"
-	@echo "  make dev               一键启动全部 (docker-compose)"
+	@echo "  make dev               一键启动全部开发栈（docker-compose.dev.yml）"
 
 # ============================================
 # 后端
@@ -135,10 +135,10 @@ gen-client:
 	@echo "==> 完成。记得 git add docs/api-contracts/api-schema.json frontend/src/api/types.d.ts"
 
 dev:
-	cd deployment && docker-compose up -d
+	cd deployment && docker-compose -f docker-compose.dev.yml up -d
 
 dev-down:
-	cd deployment && docker-compose down
+	cd deployment && docker-compose -f docker-compose.dev.yml down
 
 # ============================================
 # 清理
