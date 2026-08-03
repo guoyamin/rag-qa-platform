@@ -88,5 +88,5 @@ docs/adr/
 
 ## 相关文档
 
-- [编码规范](../CODING_STANDARD.md) — 规范总纲
+- [编码规范](../standards/coding-standard.md) — 规范总纲
 - [架构设计文档](../architecture/) — 详细架构设计
