@@ -19,7 +19,7 @@
 **如何避免**：
 - 单人项目用 **Rulesets**（不是 classic branch protection）：`required approving reviews = 0` + `enforce for administrators`（管理员也强制走 PR+CI，但不被 review 卡死）。
 - 设分支保护前先问：这个规则在我的团队规模下，我能不能自己满足？不能就是死规则。
-- 详见 [harness-setup-runbook.md §1](../harness-setup-runbook.md)。
+- 详见 [harness-setup.md §1](../../runbooks/harness-setup.md)。
 
 ### 2. release-please 配置缺 `path`，main 每次红 X
 

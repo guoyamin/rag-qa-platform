@@ -35,13 +35,13 @@ python tools/export-openapi.py  # 后端改路由后，更新 OpenAPI 契约
 backend/         FastAPI app（app/）、测试（tests/）、pyproject.toml、requirements*.txt
 frontend/        Vue 3 + TS（src/）、package.json + package-lock.json
 tools/           export-openapi.py（契约导出）、hooks/（卫生钩子）、generate-api-client.sh
-docs/            HARNESS_ENGINEERING.md（门禁体系）、api-contracts/、CONTRIBUTING.md
+docs/            门禁(HARNESS_ENGINEERING.md)、架构与模块地图(architecture/)、规范(standards/)、知识库(knowledge/)、手册(runbooks/)、api-contracts/、CONTRIBUTING.md
 .github/         workflows/ci.yml、CODEOWNERS、dependabot.yml、PR/Issue 模板
 ```
 
 ## 技能
 
-技能位于 `skills/`（跨厂商便携，根索引在本文件）。当前示例：`skills/onboard-endpoint/`（新增 API 端点的端到端流程）。新增技能在此索引登记。
+技能将位于 `.claude/skills/`（Claude 原生目录）。当前**待建**——规划中：`onboard-endpoint`（新增 API 端点端到端）、`db-migration`、`rag-pipeline`。建成后在此索引登记。（原 `skills/` 引用为历史漂移，已修正。）
 
 ## 重要文档
 
