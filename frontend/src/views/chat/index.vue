@@ -181,11 +181,13 @@ import { ElMessage } from 'element-plus'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { ChatMessage, KnowledgeBase } from '@/types'
+import { chatCompletion, submitFeedback } from '@/api/chat'
 
 const messageListRef = ref<HTMLDivElement>()
 const inputMessage = ref('')
 const isLoading = ref(false)
 const selectedKBs = ref<string[]>([])
+const currentSessionId = ref<string>('')
 
 const quickQuestions = [
   '如何查询公司规章制度？',
@@ -220,29 +222,30 @@ const sendMessage = async () => {
 
   await scrollToBottom()
 
-  // TODO: 调用后端API进行流式对话
-  // 模拟AI回复
-  setTimeout(() => {
+  // 调用后端非流式问答接口，落库并返回 message_id（供反馈使用）
+  try {
+    const resp = await chatCompletion({
+      message: content,
+      session_id: currentSessionId.value || undefined,
+      kb_ids: selectedKBs.value.length ? selectedKBs.value : undefined,
+    })
+    const data = resp.data
+    currentSessionId.value = data.session_id
     const assistantMsg: ChatMessage & { isStreaming?: boolean } = {
-      id: (Date.now() + 1).toString(),
+      id: data.message_id,
       role: 'assistant',
-      content:
-        '您好！我是企业知识库智能助手。\n\n关于您的问题，我可以为您提供以下信息：\n\n1. **制度规范**：包括考勤制度、报销制度、晋升制度等\n2. **业务流程**：请假流程、审批流程、入职离职流程等\n3. **产品文档**：产品手册、操作指南、常见问题等\n\n请问您具体想了解哪方面的业务？',
-      sources: [
-        {
-          document_id: 'doc-001',
-          chunk_index: 0,
-          score: 0.92,
-          content_preview: '公司员工规章制度手册...',
-        },
-      ],
+      content: data.answer,
+      sources: data.sources,
       created_at: new Date().toISOString(),
       isStreaming: false,
     }
     messages.value.push(assistantMsg)
+  } catch {
+    ElMessage.error('获取回答失败，请稍后重试')
+  } finally {
     isLoading.value = false
     nextTick(scrollToBottom)
-  }, 1500)
+  }
 }
 
 const renderMarkdown = (content: string) => {
@@ -250,9 +253,14 @@ const renderMarkdown = (content: string) => {
   return DOMPurify.sanitize(marked.parse(content, { breaks: true }) as string)
 }
 
-const likeMessage = (msg: ChatMessage, liked: boolean) => {
-  msg.is_liked = liked
-  ElMessage.success(liked ? '感谢您的反馈' : '我们会继续改进')
+const likeMessage = async (msg: ChatMessage, liked: boolean) => {
+  try {
+    await submitFeedback({ message_id: msg.id, is_liked: liked })
+    msg.is_liked = liked
+    ElMessage.success(liked ? '感谢您的反馈' : '我们会继续改进')
+  } catch {
+    ElMessage.error('反馈提交失败')
+  }
 }
 
 const copyMessage = async (msg: ChatMessage) => {
