@@ -17,10 +17,12 @@ from app.rag.pipeline import RAGPipeline
 from app.schemas import (
     ChatFeedbackRequest,
     ChatRequest,
+    ChatSessionResponse,
     DataResponse,
     ListResponse,
     ResponseBase,
 )
+from app.services.chat_service import ChatService
 
 logger = structlog.get_logger(__name__)
 
@@ -41,6 +43,7 @@ def get_rag_pipeline() -> RAGPipeline:
 async def chat_completion(
     request: ChatRequest,
     current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> DataResponse:
     """
     智能问答（非流式）
@@ -48,13 +51,42 @@ async def chat_completion(
     - **message**: 用户问题
     - **session_id**: 会话ID，为空则新建会话
     - **kb_ids**: 指定知识库ID列表
+
+    返回中含 **message_id**（assistant 回答的ID）与 **session_id**，
+    前端可用 message_id 对该回答提交反馈。
     """
-    result = await get_rag_pipeline().query(
+    pipeline = get_rag_pipeline()
+    result = await pipeline.query(
         question=request.message,
         kb_ids=request.kb_ids,
     )
 
-    return DataResponse(data=result)
+    # 落库会话与消息（user + assistant），返回 message_id 供反馈使用
+    service = ChatService(db)
+    session = await service.get_or_create_session(
+        user_id=current_user.id,
+        session_id=request.session_id,
+        kb_ids=request.kb_ids,
+    )
+    await service.add_message(
+        session_id=session.id, role="user", content=request.message
+    )
+    assistant_msg = await service.add_message(
+        session_id=session.id,
+        role="assistant",
+        content=result["answer"],
+        sources=result.get("sources"),
+        tokens_used=result.get("tokens_used"),
+        latency_ms=result.get("latency_ms"),
+    )
+
+    return DataResponse(
+        data={
+            **result,
+            "session_id": session.id,
+            "message_id": assistant_msg.id,
+        }
+    )
 
 
 @router.post("/completions/stream")
@@ -65,7 +97,10 @@ async def chat_completion_stream(
     """
     智能问答（流式）
     使用SSE格式返回
+
+    注：流式接口暂不落库消息，前端反馈需用非流式接口返回的 message_id。
     """
+    # TODO: 落库消息（流式，需在流结束后存 user/assistant 消息并返回 message_id）
 
     async def event_generator() -> AsyncIterator[str]:
         async for chunk in get_rag_pipeline().query_stream(
@@ -83,7 +118,11 @@ async def chat_completion_stream(
 
 @router.websocket("/ws")
 async def chat_websocket(websocket: WebSocket) -> None:
-    """WebSocket聊天接口"""
+    """WebSocket聊天接口
+
+    注：WebSocket 接口暂不落库消息。
+    """
+    # TODO: 落库消息（websocket，需在 done 后存 user/assistant 消息）
     user = await get_ws_user(websocket)
     if not user:
         await websocket.close(code=4001, reason="未授权")
@@ -143,8 +182,12 @@ async def list_sessions(
     db: AsyncSession = Depends(get_db),
 ) -> ListResponse:
     """获取用户会话列表"""
-    # TODO: 实现会话查询
-    return ListResponse(data=[], total=0)
+    service = ChatService(db)
+    sessions = await service.list_sessions(user_id=current_user.id)
+    return ListResponse(
+        data=[ChatSessionResponse.model_validate(s) for s in sessions],
+        total=len(sessions),
+    )
 
 
 @router.delete("/sessions/{session_id}", response_model=ResponseBase)
@@ -153,8 +196,9 @@ async def delete_session(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> ResponseBase:
-    """删除会话"""
-    # TODO: 实现删除
+    """删除会话（软删，含其消息）"""
+    service = ChatService(db)
+    await service.delete_session(session_id=session_id, user_id=current_user.id)
     return ResponseBase(message="删除成功")
 
 
@@ -164,6 +208,12 @@ async def submit_feedback(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> ResponseBase:
-    """提交消息反馈"""
-    # TODO: 保存反馈
+    """提交消息反馈（点赞/点踩 + 文字反馈）"""
+    service = ChatService(db)
+    await service.save_feedback(
+        message_id=feedback.message_id,
+        user_id=current_user.id,
+        is_liked=feedback.is_liked,
+        feedback=feedback.feedback,
+    )
     return ResponseBase(message="反馈提交成功")

@@ -3,6 +3,7 @@ from app.models.ab_test import ABExperiment, ABGroup, ABResult
 from app.models.announcement import Announcement, AnnouncementStatus, AnnouncementType
 from app.models.api_key import ApiKey, ApiKeyStatus, ApiKeyUsage
 from app.models.audit_log import AuditAction, AuditLevel, AuditLog
+from app.models.chat import ChatMessage, ChatSession
 from app.models.cost_alert import CostAlert
 from app.models.health_log import ModelHealthLog
 from app.models.model_instance import ModelInstance, ModelProvider, ModelStatus
@@ -31,6 +32,8 @@ __all__ = [
     "AuditAction",
     "AuditLevel",
     "AuditLog",
+    "ChatMessage",
+    "ChatSession",
     "CircuitBreakerState",
     "CostAlert",
     "ModelHealthLog",
