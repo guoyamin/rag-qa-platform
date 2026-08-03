@@ -36,8 +36,10 @@ def main() -> int:
         for f in sys.argv[1:]
         if f and f.replace("\\", "/").rstrip("/").split("/")[-1] != ".secrets.baseline"
     ]
+    # 跳过磁盘上不存在的文件（如本次提交里被删除的文件）——没内容可扫
+    files = [f for f in files if (REPO_ROOT / f).exists()]
     if not files:
-        return 0  # 无暂存文件（或只剩 baseline 自身），直接放行
+        return 0  # 无暂存文件（或只剩 baseline 自身/已删文件），直接放行
 
     if not BASELINE.exists():
         sys.stderr.write(
