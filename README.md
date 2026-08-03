@@ -60,7 +60,6 @@ rag-qa-platform/
 │   │   └── types/             # TypeScript类型
 │   ├── tests/                 # 测试代码
 │   └── Dockerfile
-├── docker-compose.yml          # 一键启动所有服务
 └── README.md
 ```
 
@@ -82,11 +81,11 @@ cd rag-qa-platform
 cp backend/.env.example backend/.env
 # 编辑 backend/.env，配置LLM API密钥
 
-# 启动所有服务
-docker-compose up -d
+# 启动开发栈（make dev → deployment/docker-compose.dev.yml：后端+前端+PG+Redis+Milvus）
+make dev
 
 # 访问
-# 前端: http://localhost
+# 前端: http://localhost:5173
 # 后端API文档: http://localhost:8000/api/docs
 ```
 
@@ -206,7 +205,7 @@ npm run test:e2e
 ## 部署建议
 
 ### 开发环境
-使用 Docker Compose 一键启动，适合快速验证功能。
+用 `make dev` 一键启动开发栈（`deployment/docker-compose.dev.yml`），适合快速验证功能。
 
 ### 测试环境
 - Kubernetes 部署

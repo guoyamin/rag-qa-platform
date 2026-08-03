@@ -165,7 +165,7 @@ curl -s "https://api.github.com/repos/guoyamin/rag-qa-platform/actions/workflows
 - **Windows 宿主机会污染基线**：`pre-commit run --all-files` 在 Windows 上会把基线里的路径写成反斜杠、行尾变 CRLF，与 CI（Linux 正斜杠）不一致。规则：**基线由 Linux 生成并提交，Windows 宿主机的改动要 revert**。commit 钩子只扫暂存文件，非密钥文件不会改基线，故日常 commit 不受影响。
 - **重新生成命令（容器内，Python 3.11+，Linux）**：
   ```bash
-  docker exec rag-qa-backend bash -lc 'cd /app && detect-secrets scan --all-files --exclude-files "\.claude/" > .secrets.baseline'
+  docker exec rag_qa_platform-backend bash -lc 'cd /app && detect-secrets scan --all-files --exclude-files "\.claude/" > .secrets.baseline'
   # 然后格式化 + 提交
   ```
 

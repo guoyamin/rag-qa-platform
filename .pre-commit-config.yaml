@@ -48,8 +48,8 @@ repos:
 
       # ===== 密钥泄露（全仓库，基于基线只拦新增）=====
       - id: detect-secrets
-        name: detect-secrets（密钥泄露扫描）
-        entry: detect-secrets-hook --baseline .secrets.baseline
+        name: detect-secrets（密钥泄露扫描，POSIX 路径归一）
+        entry: python tools/hooks/detect_secrets_local.py
         language: system
         pass_filenames: true
 

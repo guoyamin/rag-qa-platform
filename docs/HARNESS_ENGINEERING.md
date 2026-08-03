@@ -252,7 +252,7 @@ when: 用户要求新增后端接口/路由时
 
 ### 5.2 完整门禁（make check，容器内）
 
-后端在容器 `rag-qa-backend` 内执行（本机无 3.11 环境），前端本机执行。
+后端在容器 `rag_qa_platform-backend` 内执行（本机无 3.11 环境），前端本机执行。
 
 **定位**：`make check` 是**纯阻断**门禁--任一项失败即返回非零，**不混入 advisory 检查**（见 §2 门禁纯度）。
 
@@ -435,7 +435,7 @@ when: 用户要求新增后端接口/路由时
 |---|---|---|
 | **无 git remote** | CI / 分支保护 / Dependabot / release-please 全部待此激活 | 实施第 1~5 步可先行（纯本地文件）；B 类平台设置需先配 remote |
 | ~~Alembic 未初始化~~（**已解决**） | 第 6 步（PR #25）已完成初始化：env.py + 初始迁移 + URL 可配置化；`alembic check` 已纳入 make check 与 CI | 无需处置 |
-| ~~dev 容器挂载旧 worktree~~（**已解决**） | 实测当前 `rag-qa-backend` 容器已挂 main（`D:/Project/Demo/backend/...`），不再挂 suspicious-allen；`make check` 现跑 main 代码 | 仅需复核 `make check` 基线，无需重建 |
+| ~~dev 容器挂载旧 worktree~~（**已解决**） | 实测当前 `rag_qa_platform-backend` 容器已挂 main（`D:/Project/Demo/backend/...`），不再挂 suspicious-allen；`make check` 现跑 main 代码 | 仅需复核 `make check` 基线，无需重建 |
 | **ci.yml 5 个 bug** | 配 remote 后 CI 必红 | 实施第 2 步修复 |
 | **覆盖率门槛值** | 85% 留余量 vs 90% 顶住防回退 | 暂定 85%，可按团队共识调整 |
 
@@ -488,7 +488,7 @@ make gen-client
 - **状态**：Alembic 已初始化（env.py + 初始迁移 + alembic.ini URL 可配置化，PR #25），`alembic check` 已纳入 `make check` 与 CI（backend-unit-test job：sqlite 隔离库 `alembic upgrade head && alembic check`）。改 ORM 模型后须跑 `alembic revision --autogenerate` 生成迁移并提交，否则 `alembic check` 报模型↔迁移不一致。
 
 ### 14.5 §12 容器风险更正
-- §12 原「dev 容器挂旧 worktree（suspicious-allen）需用户确认重建」已过时：实测当前 `rag-qa-backend` 容器 bind mount 已指向 main（`D:/Project/Demo/backend/...`），问题已解决。仅剩「复核 `make check` 基线」一步，无需重建。
+- §12 原「dev 容器挂旧 worktree（suspicious-allen）需用户确认重建」已过时：实测当前 `rag_qa_platform-backend` 容器 bind mount 已指向 main（`D:/Project/Demo/backend/...`），问题已解决。仅剩「复核 `make check` 基线」一步，无需重建。
 
 ---
 

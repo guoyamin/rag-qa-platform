@@ -24,7 +24,7 @@ docker-compose -f deployment/docker-compose.dev.yml restart frontend
 
 ## 2. `docker cp` 目录复制不覆盖文件
 
-**问题**：用 `docker cp tests rag-qa-backend:/app/tests` 复制测试目录到容器，但容器内已有的旧文件没被更新（`test_auth.py` 还是旧版）。
+**问题**：用 `docker cp tests rag_qa_platform-backend:/app/tests` 复制测试目录到容器，但容器内已有的旧文件没被更新（`test_auth.py` 还是旧版）。
 
 **后果**：测试跑的还是旧版，修改不生效，误判测试失败原因。
 
@@ -36,10 +36,10 @@ docker-compose -f deployment/docker-compose.dev.yml restart frontend
 
 ```bash
 # ❌ 目录 cp 不覆盖已存在文件
-docker cp tests rag-qa-backend:/app/tests
+docker cp tests rag_qa_platform-backend:/app/tests
 
 # ✅ 单文件 cp 覆盖
-docker cp tests/unit/test_auth.py rag-qa-backend:/app/tests/unit/test_auth.py
+docker cp tests/unit/test_auth.py rag_qa_platform-backend:/app/tests/unit/test_auth.py
 ```
 
 ## 3. worktree 与主仓库不同步

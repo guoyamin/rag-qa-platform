@@ -62,7 +62,7 @@
 
 ## 待确认事项
 
-1. **dev 容器挂载了旧 worktree**：`rag-qa-backend` 容器的 `/app/app` 挂载自
+1. **dev 容器挂载了旧 worktree**：`rag_qa_platform-backend` 容器的 `/app/app` 挂载自
    `suspicious-allen-c54d83`（上一迭代 worktree），非 main。故 `make check` 在该容器内
    跑的是旧代码。**建议**重建容器使其挂载 main 的 backend（也修复 dev 服务器跑旧代码的问题）。
    本次验证用一次性容器挂载 main 代码完成，未改动运行中的 dev 容器。

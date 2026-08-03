@@ -50,6 +50,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/models/index.vue'),
         meta: { title: '模型管理', icon: 'Connection', admin: true },
       },
+      {
+        path: '/announcements',
+        name: 'Announcements',
+        component: () => import('@/views/admin/announcements/index.vue'),
+        meta: { title: '公告管理', icon: 'Bell', admin: true },
+      },
     ],
   },
   {
